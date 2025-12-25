@@ -7,7 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.0.0] - 2024-12-25
+## [1.1.0] - 2025-12-25
+
+### Added
+- Laravel 12.x support
+
+### Changed
+- Minimum PHP version is now 8.2 (required by Laravel 12)
+- Updated orchestra/testbench to ^10.0 for Laravel 12 testing
+
+## [1.0.0] - 2025-12-25
 
 ### Added
 - Initial release
@@ -23,7 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SidMonitor exporter stub (coming soon)
 - Comprehensive configuration options
 - Laravel 10.x and 11.x support
-- PHP 8.1+ support
+- PHP 8.2+ support
 
 ### Prometheus Metrics
 - `http_requests_total` - Total HTTP requests counter
