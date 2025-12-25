@@ -2,9 +2,9 @@
 
 namespace JunixLabs\Observatory\Tests\Unit;
 
-use JunixLabs\Observatory\Tests\TestCase;
-use JunixLabs\Observatory\Exporters\PrometheusExporter;
 use JunixLabs\Observatory\Contracts\ExporterInterface;
+use JunixLabs\Observatory\Exporters\PrometheusExporter;
+use JunixLabs\Observatory\Tests\TestCase;
 
 class PrometheusExporterTest extends TestCase
 {

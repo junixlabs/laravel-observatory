@@ -25,11 +25,17 @@ use JunixLabs\Observatory\Contracts\ExporterInterface;
 class SidMonitorExporter implements ExporterInterface
 {
     protected Application $app;
+
     protected string $endpoint;
+
     protected string $apiKey;
+
     protected string $projectId;
+
     protected array $buffer = [];
+
     protected int $batchSize;
+
     protected int $lastFlush;
 
     public function __construct(Application $app)
@@ -130,6 +136,7 @@ class SidMonitorExporter implements ExporterInterface
         if (empty($this->apiKey)) {
             // Clear buffer but don't send - API key not configured
             $this->buffer = [];
+
             return;
         }
 
@@ -143,7 +150,7 @@ class SidMonitorExporter implements ExporterInterface
                 'data' => $this->buffer,
             ]);
 
-            if (!$response->successful()) {
+            if (! $response->successful()) {
                 Log::warning('Observatory: Failed to send data to SidMonitor', [
                     'status' => $response->status(),
                     'body' => $response->body(),

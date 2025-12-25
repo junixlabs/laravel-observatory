@@ -3,23 +3,27 @@
 namespace JunixLabs\Observatory\Exporters;
 
 use Illuminate\Contracts\Foundation\Application;
+use JunixLabs\Observatory\Contracts\ExporterInterface;
 use Prometheus\CollectorRegistry;
 use Prometheus\RenderTextFormat;
-use Prometheus\Storage\InMemory;
-use Prometheus\Storage\Redis;
 use Prometheus\Storage\APC;
 use Prometheus\Storage\APCng;
-use JunixLabs\Observatory\Contracts\ExporterInterface;
+use Prometheus\Storage\InMemory;
+use Prometheus\Storage\Redis;
 
 class PrometheusExporter implements ExporterInterface
 {
     protected Application $app;
+
     protected CollectorRegistry $registry;
+
     protected string $namespace;
 
     // Cached metrics
     protected array $counters = [];
+
     protected array $histograms = [];
+
     protected array $gauges = [];
 
     public function __construct(Application $app)
@@ -37,9 +41,9 @@ class PrometheusExporter implements ExporterInterface
 
         return match ($storageType) {
             'redis' => new Redis($this->getRedisConfig()),
-            'apc' => new APC(),
-            'apcu' => new APCng(),
-            default => new InMemory(),
+            'apc' => new APC,
+            'apcu' => new APCng,
+            default => new InMemory,
         };
     }
 
@@ -166,7 +170,7 @@ class PrometheusExporter implements ExporterInterface
     {
         $sanitizedName = $this->sanitizeName($name);
 
-        if (!isset($this->counters[$sanitizedName])) {
+        if (! isset($this->counters[$sanitizedName])) {
             $labelNames = array_keys($labels);
             $this->counters[$sanitizedName] = $this->registry->getOrRegisterCounter(
                 $this->namespace,
@@ -184,7 +188,7 @@ class PrometheusExporter implements ExporterInterface
     {
         $sanitizedName = $this->sanitizeName($name);
 
-        if (!isset($this->gauges[$sanitizedName])) {
+        if (! isset($this->gauges[$sanitizedName])) {
             $labelNames = array_keys($labels);
             $this->gauges[$sanitizedName] = $this->registry->getOrRegisterGauge(
                 $this->namespace,
@@ -203,7 +207,7 @@ class PrometheusExporter implements ExporterInterface
         $sanitizedName = $this->sanitizeName($name);
         $buckets = config('observatory.prometheus.buckets', [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10]);
 
-        if (!isset($this->histograms[$sanitizedName])) {
+        if (! isset($this->histograms[$sanitizedName])) {
             $labelNames = array_keys($labels);
             $this->histograms[$sanitizedName] = $this->registry->getOrRegisterHistogram(
                 $this->namespace,
@@ -220,7 +224,8 @@ class PrometheusExporter implements ExporterInterface
 
     public function getOutput(): string
     {
-        $renderer = new RenderTextFormat();
+        $renderer = new RenderTextFormat;
+
         return $renderer->render($this->registry->getMetricFamilySamples());
     }
 
@@ -239,6 +244,7 @@ class PrometheusExporter implements ExporterInterface
     {
         // Prometheus namespace must match [a-zA-Z_:][a-zA-Z0-9_:]*
         $sanitized = preg_replace('/[^a-zA-Z0-9_]/', '_', $name);
+
         return preg_replace('/^[0-9]/', '_', $sanitized);
     }
 
@@ -246,6 +252,7 @@ class PrometheusExporter implements ExporterInterface
     {
         // Prometheus metric names must match [a-zA-Z_:][a-zA-Z0-9_:]*
         $sanitized = preg_replace('/[^a-zA-Z0-9_]/', '_', $name);
+
         return preg_replace('/^[0-9]/', '_', $sanitized);
     }
 

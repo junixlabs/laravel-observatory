@@ -4,9 +4,9 @@ namespace JunixLabs\Observatory\Collectors;
 
 use Closure;
 use GuzzleHttp\Promise\PromiseInterface;
+use JunixLabs\Observatory\Contracts\ExporterInterface;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
-use JunixLabs\Observatory\Contracts\ExporterInterface;
 
 class OutboundCollector
 {
@@ -29,6 +29,7 @@ class OutboundCollector
                 return $handler($request, $options)->then(
                     function (ResponseInterface $response) use ($request, $startTime) {
                         $this->record($request, $response, $startTime);
+
                         return $response;
                     },
                     function ($reason) use ($request, $startTime) {

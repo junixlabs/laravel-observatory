@@ -8,6 +8,7 @@ use JunixLabs\Observatory\Contracts\ExporterInterface;
 class JobCollector
 {
     protected ExporterInterface $exporter;
+
     protected array $jobStartTimes = [];
 
     public function __construct(ExporterInterface $exporter)
@@ -64,7 +65,7 @@ class JobCollector
 
         // Also record exception if present
         if ($exception !== null && config('observatory.exceptions.enabled', true)) {
-            if (!$this->shouldIgnoreException($exception)) {
+            if (! $this->shouldIgnoreException($exception)) {
                 $this->exporter->recordException($exception, [
                     'job_name' => $data['job_name'],
                     'queue' => $data['queue'],

@@ -3,13 +3,15 @@
 namespace JunixLabs\Observatory\Collectors;
 
 use Illuminate\Http\Request;
-use Symfony\Component\HttpFoundation\Response;
 use JunixLabs\Observatory\Contracts\ExporterInterface;
+use Symfony\Component\HttpFoundation\Response;
 
 class InboundCollector
 {
     protected ?float $startTime = null;
+
     protected ?float $startMemory = null;
+
     protected ExporterInterface $exporter;
 
     public function __construct(ExporterInterface $exporter)
@@ -68,7 +70,7 @@ class InboundCollector
     {
         // Check if method should be monitored
         $methods = config('observatory.inbound.methods', ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']);
-        if (!in_array($request->method(), $methods)) {
+        if (! in_array($request->method(), $methods)) {
             return false;
         }
 
@@ -101,6 +103,7 @@ class InboundCollector
 
         // Fall back to route pattern
         $uri = $route->uri();
+
         return $uri ?: 'unknown';
     }
 }

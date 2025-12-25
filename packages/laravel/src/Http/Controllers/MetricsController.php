@@ -20,7 +20,7 @@ class MetricsController extends Controller
     {
         // Check basic auth if enabled
         if (config('observatory.prometheus.auth.enabled', false)) {
-            if (!$this->authenticate($request)) {
+            if (! $this->authenticate($request)) {
                 return new Response('Unauthorized', 401, [
                     'WWW-Authenticate' => 'Basic realm="Metrics"',
                 ]);

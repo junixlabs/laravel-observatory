@@ -4,8 +4,8 @@ namespace JunixLabs\Observatory;
 
 use Illuminate\Contracts\Foundation\Application;
 use JunixLabs\Observatory\Collectors\InboundCollector;
-use JunixLabs\Observatory\Collectors\OutboundCollector;
 use JunixLabs\Observatory\Collectors\JobCollector;
+use JunixLabs\Observatory\Collectors\OutboundCollector;
 use JunixLabs\Observatory\Contracts\ExporterInterface;
 
 class Observatory

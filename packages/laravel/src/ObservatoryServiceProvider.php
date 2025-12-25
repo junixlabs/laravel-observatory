@@ -2,17 +2,17 @@
 
 namespace JunixLabs\Observatory;
 
-use Illuminate\Support\ServiceProvider;
 use Illuminate\Contracts\Http\Kernel;
+use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Queue\Events\JobProcessed;
 use Illuminate\Queue\Events\JobProcessing;
-use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\ServiceProvider;
 use JunixLabs\Observatory\Collectors\InboundCollector;
-use JunixLabs\Observatory\Collectors\OutboundCollector;
 use JunixLabs\Observatory\Collectors\JobCollector;
+use JunixLabs\Observatory\Collectors\OutboundCollector;
 use JunixLabs\Observatory\Contracts\ExporterInterface;
 use JunixLabs\Observatory\Exporters\PrometheusExporter;
 use JunixLabs\Observatory\Exporters\SidMonitorExporter;
@@ -48,7 +48,7 @@ class ObservatoryServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        if (!config('observatory.enabled', true)) {
+        if (! config('observatory.enabled', true)) {
             return;
         }
 
@@ -64,7 +64,7 @@ class ObservatoryServiceProvider extends ServiceProvider
 
     protected function registerMiddleware(): void
     {
-        if (!config('observatory.inbound.enabled', true)) {
+        if (! config('observatory.inbound.enabled', true)) {
             return;
         }
 
@@ -87,7 +87,7 @@ class ObservatoryServiceProvider extends ServiceProvider
 
     protected function registerHttpMacros(): void
     {
-        if (!config('observatory.outbound.enabled', true)) {
+        if (! config('observatory.outbound.enabled', true)) {
             return;
         }
 
@@ -103,7 +103,7 @@ class ObservatoryServiceProvider extends ServiceProvider
 
     protected function registerJobListeners(): void
     {
-        if (!config('observatory.jobs.enabled', true)) {
+        if (! config('observatory.jobs.enabled', true)) {
             return;
         }
 
