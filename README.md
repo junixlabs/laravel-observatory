@@ -6,17 +6,30 @@
 [![License](https://img.shields.io/packagist/l/junixlabs/laravel-observatory.svg?style=flat-square)](https://packagist.org/packages/junixlabs/laravel-observatory)
 [![PHP Version](https://img.shields.io/packagist/php-v/junixlabs/laravel-observatory.svg?style=flat-square)](https://packagist.org/packages/junixlabs/laravel-observatory)
 
-A comprehensive observability toolkit for Laravel applications. Monitor HTTP requests, outbound API calls, queue jobs, and exceptions with Prometheus metrics export.
+A comprehensive observability toolkit for Laravel applications. Monitor HTTP requests, outbound API calls, queue jobs, and exceptions with Prometheus metrics export and structured logging for Grafana/Loki.
 
 ## Features
 
+### Metrics (Prometheus)
 - **Inbound Request Monitoring** - Automatically track all incoming HTTP requests
 - **Outbound HTTP Monitoring** - Monitor all HTTP client calls to external services
 - **Queue Job Monitoring** - Track job execution, duration, and failures
 - **Exception Tracking** - Capture and count application exceptions
 - **Prometheus Export** - Native Prometheus metrics format with `/metrics` endpoint
-- **SidMonitor Integration** - (Coming Soon) Advanced monitoring with SidMonitor platform
 - **Custom Metrics** - Add your own counters, gauges, and histograms
+
+### Logging (Loki/Grafana)
+- **Inbound Request Logger** - Detailed HTTP request/response logging to Laravel channels
+- **Outbound Request Logger** - Log external API calls with service detection
+- **Job Logger** - Queue job execution logging with payload and duration
+- **Exception Logger** - Structured exception logging with stack traces and context
+- **Request ID Tracking** - Correlation IDs for distributed tracing
+- **Sensitive Data Masking** - Automatic masking of passwords, tokens, and PII
+
+### Additional Features
+- **Service Detection** - Automatically identify external services (Stripe, AWS, etc.)
+- **Grafana Dashboards** - Pre-built dashboard templates included
+- **SidMonitor Integration** - (Coming Soon) Advanced monitoring with SidMonitor platform
 - **Zero Configuration** - Works out of the box with sensible defaults
 
 ## Requirements
@@ -97,6 +110,43 @@ OBSERVATORY_JOBS_ENABLED=true
 # Exception tracking
 OBSERVATORY_EXCEPTIONS_ENABLED=true
 ```
+
+### Logging Configuration
+
+Enable structured logging for Grafana/Loki integration:
+
+```env
+# Inbound request logging
+OBSERVATORY_INBOUND_LOGGER_ENABLED=true
+OBSERVATORY_INBOUND_LOGGER_CHANNEL=http_monitor
+
+# Outbound request logging
+OBSERVATORY_OUTBOUND_LOGGER_ENABLED=true
+OBSERVATORY_OUTBOUND_LOGGER_CHANNEL=http_monitor
+
+# Job execution logging
+OBSERVATORY_JOB_LOGGER_ENABLED=true
+OBSERVATORY_JOB_LOGGER_CHANNEL=http_monitor
+
+# Exception logging
+OBSERVATORY_EXCEPTION_LOGGER_ENABLED=true
+OBSERVATORY_EXCEPTION_LOGGER_CHANNEL=http_monitor
+```
+
+### Request ID Configuration
+
+Enable request correlation for distributed tracing:
+
+```env
+OBSERVATORY_REQUEST_ID_ENABLED=true
+OBSERVATORY_REQUEST_ID_HEADER=X-Request-Id
+```
+
+The Request ID middleware will:
+- Read existing request ID from incoming headers
+- Generate UUID if not present
+- Add request ID to response headers
+- Include request ID in Laravel's log context
 
 ## Prometheus Metrics
 
@@ -185,6 +235,162 @@ In `config/observatory.php`:
         'internal-service.local',
     ],
 ],
+```
+
+## Service Detection
+
+Automatically identify external services in outbound logs:
+
+```php
+'outbound_logger' => [
+    'service_detection' => [
+        // E-commerce Platforms
+        '*.etsy.com' => 'etsy',
+        '*.amazon.com' => 'amazon',
+        '*.shopify.com' => 'shopify',
+
+        // Payment & Infrastructure
+        '*.stripe.com' => 'stripe',
+        '*.amazonaws.com' => 'aws',
+        '*.sendgrid.com' => 'sendgrid',
+
+        // Custom services
+        'api.myservice.com' => 'my_service',
+    ],
+],
+```
+
+This enables powerful Grafana queries:
+```logql
+{job="laravel"} | json | service="stripe"
+```
+
+## Structured Logging
+
+All loggers output JSON-formatted logs optimized for Loki/Grafana:
+
+### Inbound Request Log Example
+
+```json
+{
+  "request_id": "550e8400-e29b-41d4-a716-446655440000",
+  "method": "POST",
+  "url": "/api/v1/orders",
+  "route": "orders.store",
+  "status_code": 201,
+  "duration_ms": 145.23,
+  "user_id": 123,
+  "ip": "192.168.1.1",
+  "labels": {
+    "service": "api",
+    "environment": "production"
+  }
+}
+```
+
+### Outbound Request Log Example
+
+```json
+{
+  "request_id": "550e8400-e29b-41d4-a716-446655440000",
+  "method": "POST",
+  "url": "https://api.stripe.com/v1/charges",
+  "service": "stripe",
+  "status_code": 200,
+  "duration_ms": 523.45,
+  "labels": {
+    "type": "outbound",
+    "service": "stripe"
+  }
+}
+```
+
+### Job Log Example
+
+```json
+{
+  "job_id": "job-uuid",
+  "job_name": "ProcessOrder",
+  "queue": "orders",
+  "status": "completed",
+  "duration_ms": 1234.56,
+  "memory_mb": 45.2,
+  "labels": {
+    "queue": "orders",
+    "status": "completed"
+  }
+}
+```
+
+### Exception Log Example
+
+```json
+{
+  "request_id": "550e8400-e29b-41d4-a716-446655440000",
+  "exception_class": "App\\Exceptions\\PaymentException",
+  "message": "Payment declined",
+  "file": "/app/Services/PaymentService.php",
+  "line": 145,
+  "trace": [...],
+  "request": {
+    "method": "POST",
+    "url": "/api/v1/checkout"
+  },
+  "labels": {
+    "exception_class": "PaymentException",
+    "severity": "error"
+  }
+}
+```
+
+## Grafana Dashboards
+
+Pre-built Grafana dashboard templates are included in the `dashboards/` directory:
+
+- **observatory-dashboard.json** - Main overview dashboard with request volume, user analytics, external services, jobs, and exceptions
+- **service-health-dashboard.json** - Deep-dive into external service health and performance
+
+### Import Dashboard
+
+1. Open Grafana → Dashboards → Import
+2. Upload JSON file or paste content
+3. Select your Loki datasource
+4. Click Import
+
+### Required Log Channel Configuration
+
+Create a dedicated log channel in `config/logging.php`:
+
+```php
+'channels' => [
+    'http_monitor' => [
+        'driver' => 'single',
+        'path' => storage_path('logs/http_monitor.log'),
+        'level' => 'debug',
+    ],
+],
+```
+
+### Promtail Configuration
+
+```yaml
+scrape_configs:
+  - job_name: laravel
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: laravel
+          __path__: /path/to/storage/logs/http_monitor.log
+    pipeline_stages:
+      - json:
+          expressions:
+            level: level
+            request_id: request_id
+            service: service
+      - labels:
+          level:
+          service:
 ```
 
 ## Storage Adapters
