@@ -32,6 +32,9 @@ class ObservatoryServiceProvider extends ServiceProvider
     {
         $this->mergeConfigFrom(__DIR__ . '/../config/observatory.php', 'observatory');
 
+        // Auto-register observatory logging channel
+        $this->registerLoggingChannel();
+
         // Register collectors
         $this->app->singleton(InboundCollector::class);
         $this->app->singleton(OutboundCollector::class);
@@ -229,5 +232,22 @@ class ObservatoryServiceProvider extends ServiceProvider
                 }
             };
         });
+    }
+
+    protected function registerLoggingChannel(): void
+    {
+        // Get existing logging config
+        $loggingConfig = $this->app['config']->get('logging.channels', []);
+
+        // Only add if 'observatory' channel doesn't exist
+        if (! isset($loggingConfig['observatory'])) {
+            $this->app['config']->set('logging.channels.observatory', [
+                'driver' => 'daily',
+                'path' => storage_path('logs/observatory.log'),
+                'level' => env('LOG_LEVEL', 'debug'),
+                'days' => 7,
+                'formatter' => \Monolog\Formatter\JsonFormatter::class,
+            ]);
+        }
     }
 }

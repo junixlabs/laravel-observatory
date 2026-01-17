@@ -1733,8 +1733,8 @@
       {
         "current": {
           "selected": false,
-          "text": "dodgeprint-api",
-          "value": "dodgeprint-api"
+          "text": "laravel-observatory",
+          "value": "laravel-observatory"
         },
         "hide": 0,
         "includeAll": false,
@@ -1744,11 +1744,11 @@
         "options": [
           {
             "selected": true,
-            "text": "dodgeprint-api",
-            "value": "dodgeprint-api"
+            "text": "laravel-observatory",
+            "value": "laravel-observatory"
           }
         ],
-        "query": "dodgeprint-api",
+        "query": "laravel-observatory",
         "skipUrlSync": false,
         "type": "textbox"
       },

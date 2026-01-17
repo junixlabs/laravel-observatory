@@ -130,7 +130,7 @@ return [
         'enabled' => env('OBSERVATORY_INBOUND_LOGGER_ENABLED', false),
 
         // Laravel log channel to use (e.g., 'http_monitor', 'daily', 'single')
-        'channel' => env('OBSERVATORY_INBOUND_LOGGER_CHANNEL', 'daily'),
+        'channel' => env('OBSERVATORY_INBOUND_LOGGER_CHANNEL', 'observatory'),
 
         // Log request details
         'log_request_headers' => env('OBSERVATORY_LOG_REQUEST_HEADERS', true),
@@ -268,7 +268,7 @@ return [
         'enabled' => env('OBSERVATORY_OUTBOUND_LOGGER_ENABLED', false),
 
         // Laravel log channel to use
-        'channel' => env('OBSERVATORY_OUTBOUND_LOGGER_CHANNEL', 'http_monitor'),
+        'channel' => env('OBSERVATORY_OUTBOUND_LOGGER_CHANNEL', 'observatory'),
 
         // Log request details
         'log_request_headers' => env('OBSERVATORY_OUTBOUND_LOG_REQUEST_HEADERS', true),
@@ -361,7 +361,7 @@ return [
         'enabled' => env('OBSERVATORY_JOB_LOGGER_ENABLED', false),
 
         // Laravel log channel to use
-        'channel' => env('OBSERVATORY_JOB_LOGGER_CHANNEL', 'daily'),
+        'channel' => env('OBSERVATORY_JOB_LOGGER_CHANNEL', 'observatory'),
 
         // Jobs to exclude from logging (class names or patterns)
         'exclude_jobs' => [
@@ -429,7 +429,7 @@ return [
         'enabled' => env('OBSERVATORY_EXCEPTION_LOGGER_ENABLED', false),
 
         // Laravel log channel to use
-        'channel' => env('OBSERVATORY_EXCEPTION_LOGGER_CHANNEL', 'daily'),
+        'channel' => env('OBSERVATORY_EXCEPTION_LOGGER_CHANNEL', 'observatory'),
 
         // Exception classes to ignore (will not be logged)
         'ignore' => [
