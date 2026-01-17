@@ -42,7 +42,8 @@ return [
         'endpoint' => env('OBSERVATORY_PROMETHEUS_ENDPOINT', '/metrics'),
 
         // Storage adapter: 'memory', 'redis', 'apc', 'apcu'
-        'storage' => env('OBSERVATORY_PROMETHEUS_STORAGE', 'memory'),
+        // Note: 'memory' does not persist between requests - use 'redis' or 'apcu' for production
+        'storage' => env('OBSERVATORY_PROMETHEUS_STORAGE', 'redis'),
 
         // Redis connection (if using redis storage)
         'redis' => [
