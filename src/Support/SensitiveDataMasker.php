@@ -165,4 +165,35 @@ class SensitiveDataMasker
 
         return substr($content, 0, $maxSize) . '... [truncated]';
     }
+
+    /**
+     * Normalize array by limiting depth and item count to prevent log bloat
+     */
+    public function normalizeArray(array $data, int $maxItems = 50, int $maxDepth = 3, int $currentDepth = 0): array
+    {
+        if ($currentDepth >= $maxDepth) {
+            return ['...' => 'Max depth reached'];
+        }
+
+        $result = [];
+        $count = 0;
+
+        foreach ($data as $key => $value) {
+            if ($count >= $maxItems) {
+                $remaining = count($data) - $count;
+                $result['...'] = "Over {$maxItems} items ({$count} + {$remaining} total), truncated";
+                break;
+            }
+
+            if (is_array($value)) {
+                $result[$key] = $this->normalizeArray($value, $maxItems, $maxDepth, $currentDepth + 1);
+            } else {
+                $result[$key] = $value;
+            }
+
+            $count++;
+        }
+
+        return $result;
+    }
 }

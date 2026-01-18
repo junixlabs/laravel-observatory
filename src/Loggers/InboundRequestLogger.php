@@ -124,10 +124,13 @@ class InboundRequestLogger
             $data['request_body'] = $this->getRequestBody($request);
         }
 
-        // Add query parameters
+        // Add query parameters (normalized to prevent log bloat)
         $queryParams = $request->query();
         if (! empty($queryParams)) {
-            $data['query_params'] = $this->masker->maskArray($queryParams);
+            $maxItems = $this->config['max_query_items'] ?? 50;
+            $maxDepth = $this->config['max_query_depth'] ?? 3;
+            $normalized = $this->masker->normalizeArray($queryParams, $maxItems, $maxDepth);
+            $data['query_params'] = $this->masker->maskArray($normalized);
         }
 
         // Add environment label
