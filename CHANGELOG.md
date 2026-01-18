@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.1] - 2026-01-18
+
+### Fixed
+- **Docker Build Error** - Fixed "Can't connect to Redis server" during `composer install`
+  - PrometheusExporter now uses lazy initialization pattern
+  - Storage connection deferred until first metric is recorded
+  - Default storage changed from `apcu` to `memory` for safer package discovery
+  - Follows same pattern used by Laravel core (RedisServiceProvider, QueueServiceProvider)
+
+### Added
+- Tests for disabled Prometheus state
+- Test to verify no connection when Prometheus disabled
+
 ## [1.3.0] - 2026-01-18
 
 ### Added
