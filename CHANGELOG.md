@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.2] - 2026-01-18
+
+### Fixed
+- **Redis AUTH Error** - Fixed "ERR AUTH called without password configured" when Redis has no authentication
+  - Password now only included in config when explicitly set (non-empty)
+  - Prometheus Redis library tried to AUTH when password key existed, even if null
+
 ## [1.3.1] - 2026-01-18
 
 ### Fixed
