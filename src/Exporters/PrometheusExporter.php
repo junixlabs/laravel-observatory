@@ -74,12 +74,20 @@ class PrometheusExporter implements ExporterInterface
     {
         $config = config('observatory.prometheus.redis', []);
 
-        return [
+        $redisConfig = [
             'host' => $config['host'] ?? '127.0.0.1',
             'port' => $config['port'] ?? 6379,
-            'password' => $config['password'] ?? null,
             'database' => $config['database'] ?? 0,
         ];
+
+        // Only include password if explicitly set (non-empty)
+        // Prometheus Redis library will try to AUTH if password key exists
+        $password = $config['password'] ?? null;
+        if (! empty($password)) {
+            $redisConfig['password'] = $password;
+        }
+
+        return $redisConfig;
     }
 
     protected function registerDefaultMetrics(): void
