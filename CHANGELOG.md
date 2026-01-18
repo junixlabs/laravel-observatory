@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.3] - 2026-01-18
+
+### Fixed
+- **Log Bloat** - Fixed large query params causing massive log entries (1000+ items)
+  - Added `normalizeArray()` method to limit array depth and item count
+  - Default limits: 50 items, 3 levels deep
+  - Configurable via `inbound.max_query_items` and `inbound.max_query_depth`
+
 ## [1.3.2] - 2026-01-18
 
 ### Fixed
