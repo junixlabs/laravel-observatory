@@ -2,7 +2,6 @@
 
 namespace JunixLabs\Observatory\Tests\Unit;
 
-use JunixLabs\Observatory\Contracts\ExporterInterface;
 use JunixLabs\Observatory\Exporters\PrometheusExporter;
 use JunixLabs\Observatory\Tests\TestCase;
 
@@ -13,7 +12,15 @@ class PrometheusExporterTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->exporter = $this->app->make(ExporterInterface::class);
+
+        // Enable Prometheus for testing with in-memory storage
+        config([
+            'observatory.prometheus.enabled' => true,
+            'observatory.prometheus.storage' => 'memory',
+        ]);
+
+        // Create fresh exporter with enabled config
+        $this->exporter = new PrometheusExporter($this->app);
     }
 
     public function test_can_record_inbound_request(): void
@@ -113,5 +120,41 @@ class PrometheusExporterTest extends TestCase
         // Prometheus format should contain HELP and TYPE comments
         $this->assertStringContainsString('# HELP', $output);
         $this->assertStringContainsString('# TYPE', $output);
+    }
+
+    public function test_returns_empty_when_disabled(): void
+    {
+        config(['observatory.prometheus.enabled' => false]);
+        $disabledExporter = new PrometheusExporter($this->app);
+
+        $disabledExporter->recordInbound([
+            'method' => 'GET',
+            'route' => 'test',
+            'status_code' => 200,
+            'duration' => 0.1,
+        ]);
+
+        $this->assertEmpty($disabledExporter->getOutput());
+    }
+
+    public function test_does_not_connect_to_storage_when_disabled(): void
+    {
+        // Set Redis config that would fail if connected
+        config([
+            'observatory.prometheus.enabled' => false,
+            'observatory.prometheus.storage' => 'redis',
+            'observatory.prometheus.redis.host' => 'non-existent-host',
+        ]);
+
+        // This should NOT throw an exception because it shouldn't connect
+        $disabledExporter = new PrometheusExporter($this->app);
+        $disabledExporter->recordInbound([
+            'method' => 'GET',
+            'route' => 'test',
+            'status_code' => 200,
+            'duration' => 0.1,
+        ]);
+
+        $this->assertEmpty($disabledExporter->getOutput());
     }
 }
