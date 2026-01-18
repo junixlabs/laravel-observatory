@@ -113,22 +113,21 @@ class ObservatoryServiceProvider extends ServiceProvider
         }
 
         // Register metrics and logging middleware
-        if (config('observatory.inbound.enabled', true) || config('observatory.inbound_logger.enabled', false)) {
+        if (config('observatory.inbound.enabled', true)) {
             $kernel->pushMiddleware(ObserveRequests::class);
         }
     }
 
     protected function registerRoutes(): void
     {
-        $exporter = config('observatory.exporter', 'prometheus');
-
-        if ($exporter === 'prometheus') {
-            $endpoint = config('observatory.prometheus.endpoint', '/metrics');
-
-            Route::get($endpoint, [MetricsController::class, 'index'])
-                ->name('observatory.metrics')
-                ->middleware('web');
+        if (! config('observatory.prometheus.enabled', false)) {
+            return;
         }
+
+        $endpoint = config('observatory.prometheus.endpoint', '/metrics');
+
+        Route::get($endpoint, [MetricsController::class, 'index'])
+            ->name('observatory.metrics');
     }
 
     protected function registerHttpMacros(): void
@@ -178,7 +177,7 @@ class ObservatoryServiceProvider extends ServiceProvider
 
     protected function registerExceptionHandler(): void
     {
-        if (! config('observatory.exception_logger.enabled', false)) {
+        if (! config('observatory.exceptions.enabled', true)) {
             return;
         }
 
@@ -244,8 +243,8 @@ class ObservatoryServiceProvider extends ServiceProvider
             $this->app['config']->set('logging.channels.observatory', [
                 'driver' => 'daily',
                 'path' => storage_path('logs/observatory.log'),
-                'level' => env('LOG_LEVEL', 'debug'),
-                'days' => 7,
+                'level' => $this->app['config']->get('logging.level', 'debug'),
+                'days' => 14,
                 'formatter' => \Monolog\Formatter\JsonFormatter::class,
             ]);
         }

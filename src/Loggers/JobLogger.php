@@ -19,15 +19,13 @@ class JobLogger
     public function __construct(?SensitiveDataMasker $masker = null)
     {
         $this->masker = $masker ?? SensitiveDataMasker::fromConfig();
-        $this->config = config('observatory.job_logger', []);
+        $this->config = config('observatory.jobs', []);
     }
 
-    /**
-     * Check if logger is enabled
-     */
     public function isEnabled(): bool
     {
-        return config('observatory.job_logger.enabled', false);
+        return config('observatory.enabled', true)
+            && config('observatory.jobs.enabled', true);
     }
 
     /**
@@ -69,7 +67,7 @@ class JobLogger
         unset($this->jobStartTimes[$jobId], $this->jobStartMemory[$jobId]);
 
         $logData = $this->buildLogData($job, $status, $duration, $memoryUsed, $peakMemory, $exception);
-        $channel = $this->config['channel'] ?? 'daily';
+        $channel = config('observatory.log_channel', 'observatory');
 
         if ($status === 'failed' || $exception !== null) {
             Log::channel($channel)->error('JOB_PROCESSED', $logData);
@@ -164,15 +162,8 @@ class JobLogger
             }
         }
 
-        // Add labels for log aggregators
-        $data['labels'] = array_merge(
-            $this->config['labels'] ?? [],
-            [
-                'job_name' => $this->sanitizeLabel($this->getJobName($job)),
-                'queue' => $job->getQueue(),
-                'status' => $status,
-            ]
-        );
+        // Add environment label
+        $data['environment'] = config('observatory.labels.environment', config('app.env'));
 
         return $data;
     }

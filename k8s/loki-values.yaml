@@ -1,0 +1,48 @@
+# Laravel Observatory - Promtail Configuration
+# Merge with your existing loki-stack values
+
+promtail:
+  config:
+    snippets:
+      extraScrapeConfigs: |
+        - job_name: laravel-observatory
+          kubernetes_sd_configs:
+            - role: pod
+          relabel_configs:
+            - source_labels: [__meta_kubernetes_pod_annotation_observatory_scrape]
+              action: keep
+              regex: "true"
+            - source_labels: [__meta_kubernetes_pod_annotation_observatory_job]
+              target_label: job
+            - source_labels: [__meta_kubernetes_namespace]
+              target_label: namespace
+            - source_labels: [__meta_kubernetes_pod_name]
+              target_label: pod
+            - source_labels: [__meta_kubernetes_pod_label_app]
+              target_label: app
+          pipeline_stages:
+            - cri: {}
+            - json:
+                expressions:
+                  message: message
+                  context: context
+            - json:
+                source: context
+                expressions:
+                  type: type
+                  method: method
+                  status_code: status_code
+                  duration_ms: duration_ms
+                  service: service
+                  user_id: user_id
+                  job_name: job_name
+                  exception_class: exception_class
+            - labels:
+                message:
+                type:
+                method:
+                status_code:
+                service:
+                user_id:
+                job_name:
+                exception_class:

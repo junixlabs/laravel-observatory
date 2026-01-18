@@ -6,38 +6,24 @@
 [![License](https://img.shields.io/packagist/l/junixlabs/laravel-observatory.svg?style=flat-square)](https://packagist.org/packages/junixlabs/laravel-observatory)
 [![PHP Version](https://img.shields.io/packagist/php-v/junixlabs/laravel-observatory.svg?style=flat-square)](https://packagist.org/packages/junixlabs/laravel-observatory)
 
-A comprehensive observability toolkit for Laravel applications. Monitor HTTP requests, outbound API calls, queue jobs, and exceptions with Prometheus metrics export and structured logging for Grafana/Loki.
+A comprehensive observability toolkit for Laravel applications. Monitor HTTP requests, outbound API calls, queue jobs, and exceptions with structured logging for Grafana/Loki and optional Prometheus metrics.
 
 ## Features
 
-### Metrics (Prometheus)
-- **Inbound Request Monitoring** - Automatically track all incoming HTTP requests
-- **Outbound HTTP Monitoring** - Monitor all HTTP client calls to external services
-- **Queue Job Monitoring** - Track job execution, duration, and failures
-- **Exception Tracking** - Capture and count application exceptions
-- **Prometheus Export** - Native Prometheus metrics format with `/metrics` endpoint
-- **Custom Metrics** - Add your own counters, gauges, and histograms
-
-### Logging (Loki/Grafana)
-- **Inbound Request Logger** - Detailed HTTP request/response logging to Laravel channels
-- **Outbound Request Logger** - Log external API calls with service detection
-- **Job Logger** - Queue job execution logging with payload and duration
-- **Exception Logger** - Structured exception logging with stack traces and context
+- **Inbound Request Logging** - Automatically log all incoming HTTP requests
+- **Outbound HTTP Logging** - Log external API calls with service detection
+- **Queue Job Logging** - Track job execution with duration and memory usage
+- **Exception Logging** - Structured exception logging with stack traces
 - **Request ID Tracking** - Correlation IDs for distributed tracing
-- **User Tracking** - Track user_id and workspace_id for analytics
 - **Sensitive Data Masking** - Automatic masking of passwords, tokens, and PII
-
-### Additional Features
-- **Service Detection** - Automatically identify external services (Stripe, AWS, etc.)
-- **Grafana Dashboards** - Pre-built dashboard templates for Prometheus and Loki
-- **Docker Setup** - Ready-to-use Docker Compose for Grafana, Prometheus, Loki stack
-- **SidMonitor Integration** - (Coming Soon) Advanced monitoring with SidMonitor platform
+- **Prometheus Metrics** - Optional metrics export with `/metrics` endpoint
 - **Zero Configuration** - Works out of the box with sensible defaults
+- **Grafana Dashboards** - Pre-built dashboard templates included
 
 ## Requirements
 
-- PHP 8.2+
-- Laravel 10.0+, 11.0+, or 12.0+
+- PHP 8.0+
+- Laravel 9.0, 10.0, 11.0, or 12.0
 
 ## Installation
 
@@ -45,318 +31,101 @@ A comprehensive observability toolkit for Laravel applications. Monitor HTTP req
 composer require junixlabs/laravel-observatory
 ```
 
-The package will auto-register its service provider.
+The package auto-registers and works immediately - no configuration needed!
 
-### Publish Configuration (Optional)
+## Quick Start
+
+After installation, Observatory automatically:
+1. Logs all incoming HTTP requests to `storage/logs/observatory.log`
+2. Logs outbound HTTP calls via Laravel's HTTP client
+3. Logs queue job execution
+4. Logs exceptions with context
+
+### View Your Logs
+
+```bash
+tail -f storage/logs/observatory.log | jq
+```
+
+## Configuration
+
+### Publish Config (Optional)
 
 ```bash
 php artisan vendor:publish --tag=observatory-config
 ```
 
-## Quick Start
+### Environment Variables
 
-After installation, Observatory automatically:
-1. Monitors all incoming HTTP requests
-2. Tracks outbound HTTP calls via Laravel's HTTP client
-3. Monitors queue job execution
-4. Exposes metrics at `/metrics` endpoint
-
-Visit `http://your-app.test/metrics` to see your Prometheus metrics!
-
-## Configuration
-
-### Basic Configuration
+All features are **enabled by default**. Only set these if you need to change defaults:
 
 ```env
-# Enable/disable Observatory
-OBSERVATORY_ENABLED=true
+# Disable Observatory entirely
+OBSERVATORY_ENABLED=false
 
-# Your application name (used as metrics prefix)
-OBSERVATORY_APP_NAME=my-app
+# Change log channel (default: 'observatory' -> storage/logs/observatory.log)
+# Use 'stderr' for Docker/K8s
+OBSERVATORY_LOG_CHANNEL=stderr
 
-# Exporter: 'prometheus' or 'sidmonitor'
-OBSERVATORY_EXPORTER=prometheus
+# Disable specific loggers
+OBSERVATORY_INBOUND_ENABLED=false
+OBSERVATORY_OUTBOUND_ENABLED=false
+OBSERVATORY_JOBS_ENABLED=false
+OBSERVATORY_EXCEPTIONS_ENABLED=false
+
+# Log request/response bodies (disabled by default - can be large)
+OBSERVATORY_LOG_BODY=true
+
+# Only log slow requests (0 = log all)
+OBSERVATORY_SLOW_THRESHOLD_MS=1000
 ```
 
-### Prometheus Configuration
+## Log Channel
 
+Observatory auto-registers the `observatory` log channel:
+- **File**: `storage/logs/observatory.log`
+- **Format**: JSON (Loki/ELK compatible)
+- **Rotation**: Daily, 14 days retention
+
+For Docker/Kubernetes, use stderr:
 ```env
-# Metrics endpoint path
-OBSERVATORY_PROMETHEUS_ENDPOINT=/metrics
-
-# Storage: 'memory', 'redis', 'apc', 'apcu'
-# Use 'redis' or 'apcu' for production with multiple workers
-OBSERVATORY_PROMETHEUS_STORAGE=redis
-
-# Redis configuration (if using redis storage)
-OBSERVATORY_REDIS_HOST=127.0.0.1
-OBSERVATORY_REDIS_PORT=6379
-
-# Enable basic auth for metrics endpoint
-OBSERVATORY_PROMETHEUS_AUTH_ENABLED=false
-OBSERVATORY_PROMETHEUS_AUTH_USERNAME=prometheus
-OBSERVATORY_PROMETHEUS_AUTH_PASSWORD=secret
+OBSERVATORY_LOG_CHANNEL=stderr
 ```
 
-### Feature Toggles
+## Custom Headers
 
-```env
-# Metrics collection
-OBSERVATORY_INBOUND_ENABLED=true
-OBSERVATORY_OUTBOUND_ENABLED=true
-OBSERVATORY_JOBS_ENABLED=true
-OBSERVATORY_EXCEPTIONS_ENABLED=true
-```
-
-### Logging Configuration (for Loki)
-
-Enable structured logging for Grafana/Loki integration:
-
-```env
-# Enable loggers
-OBSERVATORY_INBOUND_LOGGER_ENABLED=true
-OBSERVATORY_OUTBOUND_LOGGER_ENABLED=true
-OBSERVATORY_JOB_LOGGER_ENABLED=true
-OBSERVATORY_EXCEPTION_LOGGER_ENABLED=true
-
-# Enable user tracking
-OBSERVATORY_LOG_USER=true
-```
-
-> **Note:** The `observatory` logging channel is **auto-configured** by the package. Logs are written to `storage/logs/observatory.log` in JSON format. No manual configuration needed!
-
-### Request ID Configuration
-
-Enable request correlation for distributed tracing:
-
-```env
-OBSERVATORY_REQUEST_ID_ENABLED=true
-OBSERVATORY_REQUEST_ID_HEADER=X-Request-Id
-```
-
-## Prometheus Metrics
-
-### Available Metrics
-
-| Metric | Type | Labels | Description |
-|--------|------|--------|-------------|
-| `{app}_http_requests_total` | Counter | method, route, status_code | Total HTTP requests |
-| `{app}_http_request_duration_seconds` | Histogram | method, route, status_code | Request latency distribution |
-| `{app}_http_outbound_requests_total` | Counter | method, host, status_code | Outbound HTTP requests |
-| `{app}_http_outbound_duration_seconds` | Histogram | method, host, status_code | Outbound request latency |
-| `{app}_jobs_processed_total` | Counter | job_name, queue, status | Queue jobs processed |
-| `{app}_jobs_duration_seconds` | Histogram | job_name, queue, status | Job execution duration |
-| `{app}_exceptions_total` | Counter | exception_class, file | Exceptions count |
-
-### Prometheus Configuration
-
-Add to your `prometheus.yml`:
-
-```yaml
-scrape_configs:
-  - job_name: 'laravel'
-    static_configs:
-      - targets: ['your-app.test:80']
-    metrics_path: '/metrics'
-```
-
-## Custom Metrics
-
-Use the `Observatory` facade to add custom metrics:
-
-```php
-use JunixLabs\Observatory\Facades\Observatory;
-
-// Increment a counter
-Observatory::increment('api_calls', ['endpoint' => 'users']);
-
-// Set a gauge value
-Observatory::gauge('active_connections', 42, ['server' => 'web-1']);
-
-// Record a histogram observation
-Observatory::histogram('payment_amount', 99.99, ['currency' => 'USD']);
-```
-
-## Docker Setup (Grafana + Prometheus + Loki)
-
-A complete Docker setup is included in `.tests/` directory for local development and testing.
-
-### Quick Start
-
-```bash
-cd .tests
-
-# Create .env with your Laravel logs path
-echo "LARAVEL_LOGS_PATH=/path/to/your/laravel-app/storage/logs" > .env
-
-# Start the stack
-docker-compose up -d
-```
-
-### Access URLs
-
-| Service | URL | Credentials |
-|---------|-----|-------------|
-| Grafana | http://localhost:3000 | admin / admin |
-| Prometheus | http://localhost:9090 | - |
-| Loki | http://localhost:3100 | - |
-
-### Stack Components
-
-```
-┌─────────────────────────────────────────────────────────┐
-│                     Grafana :3000                       │
-│              (Dashboards & Visualization)               │
-└─────────────────┬───────────────────┬───────────────────┘
-                  │                   │
-         ┌────────▼────────┐ ┌────────▼────────┐
-         │ Prometheus:9090 │ │   Loki :3100    │
-         │    (Metrics)    │ │    (Logs)       │
-         └────────┬────────┘ └────────┬────────┘
-                  │                   │
-                  │           ┌───────▼────────┐
-                  │           │   Promtail     │
-                  │           │ (Log Shipper)  │
-                  │           └───────┬────────┘
-                  │                   │
-         ┌────────▼───────────────────▼────────┐
-         │           Laravel App               │
-         │  /metrics          storage/logs/    │
-         └─────────────────────────────────────┘
-```
-
-### Update Prometheus Target
-
-Edit `.tests/docker/prometheus/prometheus.yml` to point to your Laravel app:
-
-```yaml
-scrape_configs:
-  - job_name: 'laravel-observatory'
-    static_configs:
-      - targets: ['host.docker.internal:8000']  # Your Laravel app port
-    metrics_path: /metrics
-```
-
-## Grafana Dashboards
-
-Pre-built dashboards are included in the `dashboards/` directory:
-
-| Dashboard | Data Source | Description |
-|-----------|-------------|-------------|
-| `prometheus-dashboard.json` | Prometheus | Metrics overview, latency percentiles, error rates |
-| `observatory-dashboard.json` | Loki | Request logs, user analytics, exceptions |
-| `service-health-dashboard.json` | Loki | External service health and performance |
-
-### Dashboard Features
-
-**Prometheus Dashboard:**
-- Request rate & latency (P50, P90, P95, P99)
-- Success rate & error rate
-- Top routes by RPS and latency
-- Outbound requests by host
-- Job processing stats
-- Exception counts
-
-**Loki Dashboard:**
-- Total requests, jobs, exceptions
-- User activity tracking
-- Request volume over time
-- Status code distribution
-- External service health
-- Live log stream
-
-### Import Dashboards
-
-**Option 1: Auto-provision (Docker)**
-Dashboards are automatically loaded when using the Docker setup.
-
-**Option 2: Manual Import**
-1. Open Grafana → Dashboards → Import
-2. Upload JSON file from `dashboards/` directory
-3. Select your datasource
-4. Click Import
-
-### Dashboard Variables
-
-Update the dashboard variables to match your setup:
-
-| Variable | Prometheus | Loki |
-|----------|------------|------|
-| `app_name` | Your app prefix (e.g., `MyApp`) | - |
-| `job` | - | `laravel-observatory` |
-
-## User Tracking
-
-Observatory can track user activity in Loki logs for analytics:
-
-### Enable User Tracking
-
-```env
-OBSERVATORY_LOG_USER=true
-```
-
-### Log Output
-
-```json
-{
-  "message": "HTTP_REQUEST",
-  "context": {
-    "user_id": "123",
-    "workspace_id": "456",
-    "method": "POST",
-    "route": "api.orders.store",
-    "status_code": 200
-  }
-}
-```
-
-### Query Examples (LogQL)
-
-```logql
-# All requests by user 123
-{job="laravel-observatory"} | json | user_id="123"
-
-# Errors by user
-{job="laravel-observatory"} | json | user_id="123" | status_code >= 400
-
-# Top users by request count
-sum by (user_id) (count_over_time({job="laravel-observatory"} | json | message="HTTP_REQUEST" | user_id != "" [1h]))
-```
-
-## Excluding Paths and Jobs
-
-### Exclude Paths from Monitoring
+Extract custom headers into logs (multi-tenant, workspace, etc.):
 
 ```php
 // config/observatory.php
 'inbound' => [
-    'exclude_paths' => [
-        'telescope*',
-        'horizon*',
-        '_debugbar*',
-        'health',
-        'metrics',
+    'custom_headers' => [
+        'X-Workspace-Id' => 'workspace_id',
+        'X-Tenant-Id' => 'tenant_id',
+        'X-Correlation-Id' => 'correlation_id',
     ],
 ],
 ```
 
-### Exclude Jobs from Monitoring
-
-```php
-'jobs' => [
-    'exclude_jobs' => [
-        'App\Jobs\InternalHealthCheck',
-    ],
-],
+Result in logs:
+```json
+{
+  "request_id": "abc-123",
+  "method": "POST",
+  "path": "/api/users",
+  "workspace_id": "ws-456",
+  "tenant_id": "tenant-789"
+}
 ```
 
 ## Service Detection
 
-Automatically identify external services in outbound logs:
+Identify external services in outbound logs:
 
 ```php
-'outbound_logger' => [
-    'service_detection' => [
+// config/observatory.php
+'outbound' => [
+    'services' => [
         '*.stripe.com' => 'stripe',
         '*.amazonaws.com' => 'aws',
         '*.sendgrid.com' => 'sendgrid',
@@ -365,9 +134,24 @@ Automatically identify external services in outbound logs:
 ],
 ```
 
-Query in Grafana:
-```logql
-{job="laravel-observatory"} | json | service="stripe"
+## Excluding Paths/Jobs
+
+```php
+// config/observatory.php
+'inbound' => [
+    'exclude_paths' => [
+        'telescope*',
+        'horizon*',
+        'health',
+        'metrics',
+    ],
+],
+
+'jobs' => [
+    'exclude_jobs' => [
+        'App\Jobs\InternalHealthCheck',
+    ],
+],
 ```
 
 ## Structured Log Examples
@@ -379,14 +163,18 @@ Query in Grafana:
   "message": "HTTP_REQUEST",
   "context": {
     "request_id": "550e8400-e29b-41d4-a716-446655440000",
+    "type": "inbound",
     "method": "POST",
-    "url": "/api/v1/orders",
+    "url": "https://example.com/api/v1/orders",
+    "path": "api/v1/orders",
     "route": "orders.store",
     "status_code": 201,
     "duration_ms": 145.23,
-    "user_id": "123",
-    "workspace_id": "456",
-    "ip": "192.168.1.1"
+    "ip": "192.168.1.1",
+    "user_agent": "Mozilla/5.0...",
+    "user_id": 123,
+    "memory_mb": 45.2,
+    "environment": "production"
   }
 }
 ```
@@ -398,11 +186,14 @@ Query in Grafana:
   "message": "HTTP_OUTBOUND",
   "context": {
     "request_id": "550e8400-e29b-41d4-a716-446655440000",
+    "type": "outbound",
+    "service": "stripe",
     "method": "POST",
     "url": "https://api.stripe.com/v1/charges",
-    "service": "stripe",
+    "host": "api.stripe.com",
     "status_code": 200,
-    "duration_ms": 523.45
+    "duration_ms": 523.45,
+    "environment": "production"
   }
 }
 ```
@@ -413,11 +204,17 @@ Query in Grafana:
 {
   "message": "JOB_PROCESSED",
   "context": {
-    "job_name": "ProcessOrder",
+    "job_id": "123",
+    "job_name": "App\\Jobs\\ProcessOrder",
     "queue": "orders",
     "status": "processed",
     "duration_ms": 1234.56,
-    "memory_mb": 45.2
+    "attempts": 1,
+    "memory": {
+      "used_mb": 12.5,
+      "peak_mb": 45.2
+    },
+    "environment": "production"
   }
 }
 ```
@@ -430,42 +227,105 @@ Query in Grafana:
   "context": {
     "request_id": "550e8400-e29b-41d4-a716-446655440000",
     "exception_class": "App\\Exceptions\\PaymentException",
-    "exception_message": "Payment declined",
-    "file": "PaymentService.php",
+    "message": "Payment declined",
+    "code": 402,
+    "file": "/app/Services/PaymentService.php",
     "line": 145,
-    "user_id": "123"
+    "request": {
+      "method": "POST",
+      "url": "https://example.com/api/orders",
+      "path": "api/orders"
+    },
+    "user": {
+      "id": 123
+    },
+    "trace": [...],
+    "environment": "production"
   }
 }
 ```
 
-## Storage Adapters
+## Prometheus Metrics (Optional)
 
-For production with multiple workers, use persistent storage:
-
-### Redis (Recommended)
+Enable Prometheus metrics endpoint:
 
 ```env
-OBSERVATORY_PROMETHEUS_STORAGE=redis
-OBSERVATORY_REDIS_HOST=127.0.0.1
-OBSERVATORY_REDIS_PORT=6379
+OBSERVATORY_PROMETHEUS_ENABLED=true
+OBSERVATORY_PROMETHEUS_STORAGE=apcu  # or 'redis', 'memory'
 ```
 
-### APCu
+Visit `http://your-app.test/metrics` to see metrics.
+
+### Available Metrics
+
+| Metric | Type | Description |
+|--------|------|-------------|
+| `{app}_http_requests_total` | Counter | Total HTTP requests |
+| `{app}_http_request_duration_seconds` | Histogram | Request latency |
+| `{app}_http_outbound_requests_total` | Counter | Outbound HTTP requests |
+| `{app}_jobs_processed_total` | Counter | Queue jobs processed |
+| `{app}_exceptions_total` | Counter | Exceptions count |
+
+### Prometheus Auth
 
 ```env
-OBSERVATORY_PROMETHEUS_STORAGE=apcu
+OBSERVATORY_METRICS_AUTH=true
+OBSERVATORY_METRICS_USER=prometheus
+OBSERVATORY_METRICS_PASS=secret
 ```
 
-## Prometheus vs Loki: When to Use
+## Grafana Integration
 
-| Use Case | Tool | Why |
-|----------|------|-----|
-| "Error rate increased 5%?" | Prometheus | Aggregated metrics, alerting |
-| "Which user caused the error?" | Loki | Full log context, user_id |
-| "P95 latency trend" | Prometheus | Histogram percentiles |
-| "Show me the request payload" | Loki | Detailed logs |
-| "Alert when CPU > 80%" | Prometheus | Numeric thresholds |
-| "Trace request across services" | Loki | Request ID correlation |
+### Docker Setup
+
+A complete Docker setup is included in `.tests/` directory:
+
+```bash
+cd .tests
+echo "LARAVEL_LOGS_PATH=/path/to/your/laravel/storage/logs" > .env
+docker-compose up -d
+```
+
+| Service | URL | Credentials |
+|---------|-----|-------------|
+| Grafana | http://localhost:3000 | admin / admin |
+| Prometheus | http://localhost:9090 | - |
+| Loki | http://localhost:3100 | - |
+
+### Pre-built Dashboards
+
+Import dashboards from `dashboards/` directory:
+
+| Dashboard | Data Source | Description |
+|-----------|-------------|-------------|
+| `observatory-dashboard.json` | Loki | Request logs, user analytics, exceptions |
+| `prometheus-dashboard.json` | Prometheus | Metrics overview, latency percentiles |
+
+### LogQL Query Examples
+
+```logql
+# All requests
+{job="laravel-observatory"} | json | message="HTTP_REQUEST"
+
+# Errors only
+{job="laravel-observatory"} | json | status_code >= 400
+
+# By user
+{job="laravel-observatory"} | json | user_id="123"
+
+# Slow requests (>1s)
+{job="laravel-observatory"} | json | duration_ms > 1000
+
+# External service calls
+{job="laravel-observatory"} | json | type="outbound" | service="stripe"
+
+# Exceptions
+{job="laravel-observatory"} | json | message="EXCEPTION"
+```
+
+## Kubernetes Deployment
+
+See [k8s/README.md](k8s/README.md) for Kubernetes deployment with Loki stack.
 
 ## Testing
 
@@ -475,15 +335,15 @@ composer test
 
 ## Changelog
 
-Please see [CHANGELOG](CHANGELOG.md) for more information on what has changed recently.
+See [CHANGELOG](CHANGELOG.md) for recent changes.
 
 ## Contributing
 
-Please see [CONTRIBUTING](CONTRIBUTING.md) for details.
+See [CONTRIBUTING](CONTRIBUTING.md) for details.
 
 ## Security
 
-If you discover any security-related issues, please email chuongld@canawan.com instead of using the issue tracker.
+Report security issues to chuongld@canawan.com instead of the issue tracker.
 
 ## Credits
 
@@ -492,4 +352,4 @@ If you discover any security-related issues, please email chuongld@canawan.com i
 
 ## License
 
-The MIT License (MIT). Please see [License File](LICENSE) for more information.
+MIT License. See [LICENSE](LICENSE) for details.

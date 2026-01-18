@@ -1,1829 +1,457 @@
 {
-  "annotations": {
-    "list": [
-      {
-        "builtIn": 1,
-        "datasource": {
-          "type": "grafana",
-          "uid": "-- Grafana --"
-        },
-        "enable": true,
-        "hide": true,
-        "iconColor": "rgba(0, 211, 255, 1)",
-        "name": "Annotations & Alerts",
-        "type": "dashboard"
-      }
-    ]
-  },
-  "description": "Laravel Observatory - Complete API Monitoring Dashboard",
+  "annotations": {"list": []},
+  "description": "Laravel Observatory - Complete API & Service Monitoring",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
   "id": null,
   "links": [],
-  "liveNow": false,
   "panels": [
+    {"collapsed": false, "gridPos": {"h": 1, "w": 24, "x": 0, "y": 0}, "id": 100, "panels": [], "title": "Overview", "type": "row"},
     {
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 0
-      },
-      "id": 100,
-      "panels": [],
-      "title": "Overview",
-      "type": "row"
-    },
-    {
-      "datasource": {
-        "type": "loki",
-        "uid": "${datasource}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 4,
-        "x": 0,
-        "y": 1
-      },
+      "datasource": {"type": "loki", "uid": "${datasource}"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "#73BF69", "value": null}]}, "unit": "short"}},
+      "gridPos": {"h": 4, "w": 4, "x": 0, "y": 1},
       "id": 1,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": ["sum"],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "auto"
-      },
-      "pluginVersion": "10.0.0",
-      "targets": [
-        {
-          "datasource": {
-            "type": "loki",
-            "uid": "${datasource}"
-          },
-          "expr": "sum(count_over_time({job=\"$job\"} | json | message=\"HTTP_REQUEST\" [$__range]))",
-          "refId": "A"
-        }
-      ],
-      "title": "Total Inbound Requests",
+      "options": {"colorMode": "value", "graphMode": "area", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}},
+      "targets": [{"expr": "sum(count_over_time({job=\"$job\"} | json | __error__=\"\" | message=\"HTTP_REQUEST\" [$__range]))", "refId": "A"}],
+      "title": "Inbound Requests",
       "type": "stat"
     },
     {
-      "datasource": {
-        "type": "loki",
-        "uid": "${datasource}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "blue",
-                "value": null
-              }
-            ]
-          },
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 4,
-        "x": 4,
-        "y": 1
-      },
+      "datasource": {"type": "loki", "uid": "${datasource}"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "#5794F2", "value": null}]}, "unit": "short"}},
+      "gridPos": {"h": 4, "w": 4, "x": 4, "y": 1},
       "id": 2,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": ["sum"],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "auto"
-      },
-      "pluginVersion": "10.0.0",
-      "targets": [
-        {
-          "datasource": {
-            "type": "loki",
-            "uid": "${datasource}"
-          },
-          "expr": "sum(count_over_time({job=\"$job\"} | json | message=\"HTTP_OUTBOUND\" [$__range]))",
-          "refId": "A"
-        }
-      ],
-      "title": "Total Outbound Requests",
+      "options": {"colorMode": "value", "graphMode": "area", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}},
+      "targets": [{"expr": "sum(count_over_time({job=\"$job\"} | json | __error__=\"\" | message=\"HTTP_OUTBOUND\" [$__range]))", "refId": "A"}],
+      "title": "Outbound Requests",
       "type": "stat"
     },
     {
-      "datasource": {
-        "type": "loki",
-        "uid": "${datasource}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "purple",
-                "value": null
-              }
-            ]
-          },
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 4,
-        "x": 8,
-        "y": 1
-      },
+      "datasource": {"type": "loki", "uid": "${datasource}"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "#B877D9", "value": null}]}, "unit": "short"}},
+      "gridPos": {"h": 4, "w": 4, "x": 8, "y": 1},
       "id": 3,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": ["sum"],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "auto"
-      },
-      "pluginVersion": "10.0.0",
-      "targets": [
-        {
-          "datasource": {
-            "type": "loki",
-            "uid": "${datasource}"
-          },
-          "expr": "sum(count_over_time({job=\"$job\"} | json | message=\"JOB_PROCESSED\" [$__range]))",
-          "refId": "A"
-        }
-      ],
-      "title": "Total Jobs Processed",
+      "options": {"colorMode": "value", "graphMode": "area", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}},
+      "targets": [{"expr": "sum(count_over_time({job=\"$job\"} | json | __error__=\"\" | message=\"JOB_PROCESSED\" [$__range]))", "refId": "A"}],
+      "title": "Jobs Processed",
       "type": "stat"
     },
     {
-      "datasource": {
-        "type": "loki",
-        "uid": "${datasource}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 10
-              },
-              {
-                "color": "red",
-                "value": 50
-              }
-            ]
-          },
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 4,
-        "x": 12,
-        "y": 1
-      },
+      "datasource": {"type": "loki", "uid": "${datasource}"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "#73BF69", "value": null}, {"color": "#FADE2A", "value": 10}, {"color": "#F2495C", "value": 50}]}, "unit": "short"}},
+      "gridPos": {"h": 4, "w": 4, "x": 12, "y": 1},
       "id": 4,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": ["sum"],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "auto"
-      },
-      "pluginVersion": "10.0.0",
-      "targets": [
-        {
-          "datasource": {
-            "type": "loki",
-            "uid": "${datasource}"
-          },
-          "expr": "sum(count_over_time({job=\"$job\"} | json | message=\"EXCEPTION\" [$__range]))",
-          "refId": "A"
-        }
-      ],
-      "title": "Total Exceptions",
+      "options": {"colorMode": "value", "graphMode": "area", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}},
+      "targets": [{"expr": "sum(count_over_time({job=\"$job\"} | json | __error__=\"\" | message=\"EXCEPTION\" [$__range]))", "refId": "A"}],
+      "title": "Exceptions",
       "type": "stat"
     },
     {
-      "datasource": {
-        "type": "loki",
-        "uid": "${datasource}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "percentage",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 95
-              },
-              {
-                "color": "green",
-                "value": 99
-              }
-            ]
-          },
-          "unit": "percentunit"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 4,
-        "x": 16,
-        "y": 1
-      },
+      "datasource": {"type": "loki", "uid": "${datasource}"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "#F2495C", "value": null}, {"color": "#FADE2A", "value": 0.95}, {"color": "#73BF69", "value": 0.99}]}, "unit": "percentunit", "min": 0, "max": 1}},
+      "gridPos": {"h": 4, "w": 4, "x": 16, "y": 1},
       "id": 5,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": ["lastNotNull"],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "auto"
-      },
-      "pluginVersion": "10.0.0",
-      "targets": [
-        {
-          "datasource": {
-            "type": "loki",
-            "uid": "${datasource}"
-          },
-          "expr": "sum(count_over_time({job=\"$job\"} | json | message=\"HTTP_REQUEST\" | status_code < 400 [$__range])) / sum(count_over_time({job=\"$job\"} | json | message=\"HTTP_REQUEST\" [$__range]))",
-          "refId": "A"
-        }
-      ],
+      "options": {"orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "showThresholdLabels": false, "showThresholdMarkers": true},
+      "targets": [{"expr": "sum(count_over_time({job=\"$job\"} | json | __error__=\"\" | message=\"HTTP_REQUEST\" | context_status_code < 400 [$__range])) / sum(count_over_time({job=\"$job\"} | json | __error__=\"\" | message=\"HTTP_REQUEST\" [$__range]))", "refId": "A"}],
       "title": "Success Rate",
-      "type": "stat"
+      "type": "gauge"
     },
     {
-      "datasource": {
-        "type": "loki",
-        "uid": "${datasource}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 4,
-        "x": 20,
-        "y": 1
-      },
+      "datasource": {"type": "loki", "uid": "${datasource}"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "#73BF69", "value": null}]}, "unit": "short"}},
+      "gridPos": {"h": 4, "w": 4, "x": 20, "y": 1},
       "id": 6,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": ["distinctCount"],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "auto"
-      },
-      "pluginVersion": "10.0.0",
-      "targets": [
-        {
-          "datasource": {
-            "type": "loki",
-            "uid": "${datasource}"
-          },
-          "expr": "count(sum by (user_id) (count_over_time({job=\"$job\"} | json | message=\"HTTP_REQUEST\" | user_id != \"\" [$__range])))",
-          "refId": "A"
-        }
-      ],
+      "options": {"colorMode": "value", "graphMode": "area", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}},
+      "targets": [{"expr": "count(sum by (context_user_id) (count_over_time({job=\"$job\"} | json | __error__=\"\" | message=\"HTTP_REQUEST\" | context_user_id=~\".+\" [$__range])))", "refId": "A"}],
       "title": "Active Users",
       "type": "stat"
     },
     {
-      "datasource": {
-        "type": "loki",
-        "uid": "${datasource}"
-      },
+      "datasource": {"type": "loki", "uid": "${datasource}"},
       "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 20,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineInterpolation": "smooth",
-            "lineWidth": 2,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "unit": "short"
-        },
+        "defaults": {"color": {"mode": "palette-classic"}, "custom": {"drawStyle": "line", "fillOpacity": 20, "lineInterpolation": "smooth", "lineWidth": 2, "showPoints": "auto", "spanNulls": false, "stacking": {"mode": "none"}}, "unit": "short"},
         "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Inbound"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "green",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Outbound"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "blue",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          }
+          {"matcher": {"id": "byName", "options": "Inbound"}, "properties": [{"id": "color", "value": {"fixedColor": "#73BF69", "mode": "fixed"}}]},
+          {"matcher": {"id": "byName", "options": "Outbound"}, "properties": [{"id": "color", "value": {"fixedColor": "#5794F2", "mode": "fixed"}}]}
         ]
       },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 5
-      },
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 5},
       "id": 7,
-      "options": {
-        "legend": {
-          "calcs": ["sum", "mean"],
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "none"
-        }
-      },
+      "options": {"legend": {"calcs": ["sum", "mean"], "displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi"}},
       "targets": [
-        {
-          "datasource": {
-            "type": "loki",
-            "uid": "${datasource}"
-          },
-          "expr": "sum(count_over_time({job=\"$job\"} | json | message=\"HTTP_REQUEST\" [$__interval]))",
-          "legendFormat": "Inbound",
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "loki",
-            "uid": "${datasource}"
-          },
-          "expr": "sum(count_over_time({job=\"$job\"} | json | message=\"HTTP_OUTBOUND\" [$__interval]))",
-          "legendFormat": "Outbound",
-          "refId": "B"
-        }
+        {"expr": "sum(count_over_time({job=\"$job\"} | json | __error__=\"\" | message=\"HTTP_REQUEST\" [$__interval]))", "legendFormat": "Inbound", "refId": "A"},
+        {"expr": "sum(count_over_time({job=\"$job\"} | json | __error__=\"\" | message=\"HTTP_OUTBOUND\" [$__interval]))", "legendFormat": "Outbound", "refId": "B"}
       ],
-      "title": "Request Volume (Inbound vs Outbound)",
+      "title": "Request Volume",
       "type": "timeseries"
     },
     {
-      "datasource": {
-        "type": "loki",
-        "uid": "${datasource}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            }
-          },
-          "mappings": []
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 6,
-        "x": 12,
-        "y": 5
-      },
+      "datasource": {"type": "loki", "uid": "${datasource}"},
+      "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}}},
+      "gridPos": {"h": 8, "w": 6, "x": 12, "y": 5},
       "id": 8,
-      "options": {
-        "legend": {
-          "displayMode": "table",
-          "placement": "right",
-          "showLegend": true,
-          "values": ["value", "percent"]
-        },
-        "pieType": "pie",
-        "reduceOptions": {
-          "calcs": ["sum"],
-          "fields": "",
-          "values": false
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "loki",
-            "uid": "${datasource}"
-          },
-          "expr": "sum by (status_code) (count_over_time({job=\"$job\"} | json | message=\"HTTP_REQUEST\" [$__range]))",
-          "legendFormat": "{{status_code}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Response Status Codes",
+      "options": {"legend": {"displayMode": "table", "placement": "right", "showLegend": true, "values": ["value", "percent"]}, "pieType": "pie", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}},
+      "targets": [{"expr": "sum by (context_status_code) (count_over_time({job=\"$job\"} | json | __error__=\"\" | message=\"HTTP_REQUEST\" [$__range]))", "legendFormat": "{{context_status_code}}", "refId": "A"}],
+      "title": "Status Codes",
       "type": "piechart"
     },
     {
-      "datasource": {
-        "type": "loki",
-        "uid": "${datasource}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            }
-          },
-          "mappings": []
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 6,
-        "x": 18,
-        "y": 5
-      },
+      "datasource": {"type": "loki", "uid": "${datasource}"},
+      "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}}},
+      "gridPos": {"h": 8, "w": 6, "x": 18, "y": 5},
       "id": 9,
-      "options": {
-        "legend": {
-          "displayMode": "table",
-          "placement": "right",
-          "showLegend": true,
-          "values": ["value", "percent"]
-        },
-        "pieType": "pie",
-        "reduceOptions": {
-          "calcs": ["sum"],
-          "fields": "",
-          "values": false
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "loki",
-            "uid": "${datasource}"
-          },
-          "expr": "sum by (method) (count_over_time({job=\"$job\"} | json | message=\"HTTP_REQUEST\" [$__range]))",
-          "legendFormat": "{{method}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Request Methods",
+      "options": {"legend": {"displayMode": "table", "placement": "right", "showLegend": true, "values": ["value", "percent"]}, "pieType": "pie", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}},
+      "targets": [{"expr": "sum by (context_method) (count_over_time({job=\"$job\"} | json | __error__=\"\" | message=\"HTTP_REQUEST\" [$__range]))", "legendFormat": "{{context_method}}", "refId": "A"}],
+      "title": "HTTP Methods",
       "type": "piechart"
     },
+
+    {"collapsed": false, "gridPos": {"h": 1, "w": 24, "x": 0, "y": 13}, "id": 106, "panels": [], "title": "Inbound Performance", "type": "row"},
     {
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 13
-      },
-      "id": 101,
-      "panels": [],
-      "title": "User Analytics",
-      "type": "row"
+      "datasource": {"type": "loki", "uid": "${datasource}"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "#73BF69", "value": null}, {"color": "#FADE2A", "value": 200}, {"color": "#F2495C", "value": 500}]}, "unit": "ms"}},
+      "gridPos": {"h": 4, "w": 4, "x": 0, "y": 14},
+      "id": 30,
+      "options": {"colorMode": "value", "graphMode": "area", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}},
+      "targets": [{"expr": "avg(avg_over_time({job=\"$job\"} | json | __error__=\"\" | message=\"HTTP_REQUEST\" | unwrap context_duration_ms [$__range]))", "refId": "A"}],
+      "title": "Avg Latency",
+      "type": "stat"
     },
     {
-      "datasource": {
-        "type": "loki",
-        "uid": "${datasource}"
-      },
+      "datasource": {"type": "loki", "uid": "${datasource}"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "#73BF69", "value": null}, {"color": "#FADE2A", "value": 500}, {"color": "#F2495C", "value": 1000}]}, "unit": "ms"}},
+      "gridPos": {"h": 4, "w": 4, "x": 4, "y": 14},
+      "id": 31,
+      "options": {"colorMode": "value", "graphMode": "area", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}},
+      "targets": [{"expr": "max(max_over_time({job=\"$job\"} | json | __error__=\"\" | message=\"HTTP_REQUEST\" | unwrap context_duration_ms [$__range]))", "refId": "A"}],
+      "title": "Max Latency",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "loki", "uid": "${datasource}"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "#73BF69", "value": null}, {"color": "#FADE2A", "value": 300}, {"color": "#F2495C", "value": 800}]}, "unit": "ms"}},
+      "gridPos": {"h": 4, "w": 4, "x": 8, "y": 14},
+      "id": 32,
+      "options": {"colorMode": "value", "graphMode": "area", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}},
+      "targets": [{"expr": "avg(quantile_over_time(0.95, {job=\"$job\"} | json | __error__=\"\" | message=\"HTTP_REQUEST\" | unwrap context_duration_ms [$__range]))", "refId": "A"}],
+      "title": "P95 Latency",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "loki", "uid": "${datasource}"},
       "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "custom": {
-            "align": "auto",
-            "cellOptions": {
-              "type": "auto"
-            },
-            "inspect": false
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Requests"
-            },
-            "properties": [
-              {
-                "id": "custom.cellOptions",
-                "value": {
-                  "mode": "gradient",
-                  "type": "gauge"
-                }
-              },
-              {
-                "id": "color",
-                "value": {
-                  "mode": "continuous-GrYlRd"
-                }
-              }
-            ]
-          }
-        ]
+        "defaults": {"color": {"mode": "palette-classic"}, "custom": {"drawStyle": "line", "fillOpacity": 10, "lineInterpolation": "smooth", "lineWidth": 2, "showPoints": "auto", "thresholdsStyle": {"mode": "line+area"}}, "thresholds": {"mode": "absolute", "steps": [{"color": "#73BF69", "value": null}, {"color": "#FADE2A", "value": 200}, {"color": "#F2495C", "value": 500}]}, "unit": "ms"}
       },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 14
+      "gridPos": {"h": 6, "w": 12, "x": 12, "y": 14},
+      "id": 33,
+      "options": {"legend": {"calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi"}},
+      "targets": [
+        {"expr": "avg(avg_over_time({job=\"$job\"} | json | __error__=\"\" | message=\"HTTP_REQUEST\" | unwrap context_duration_ms [$__interval]))", "legendFormat": "Avg", "refId": "A"},
+        {"expr": "max(max_over_time({job=\"$job\"} | json | __error__=\"\" | message=\"HTTP_REQUEST\" | unwrap context_duration_ms [$__interval]))", "legendFormat": "Max", "refId": "B"},
+        {"expr": "avg(quantile_over_time(0.95, {job=\"$job\"} | json | __error__=\"\" | message=\"HTTP_REQUEST\" | unwrap context_duration_ms [$__interval]))", "legendFormat": "P95", "refId": "C"}
+      ],
+      "title": "Response Time",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "loki", "uid": "${datasource}"},
+      "fieldConfig": {
+        "defaults": {"color": {"mode": "continuous-GrYlRd"}, "thresholds": {"mode": "absolute", "steps": [{"color": "#73BF69", "value": null}]}, "unit": "short", "min": 0},
+        "overrides": []
       },
+      "gridPos": {"h": 6, "w": 6, "x": 0, "y": 18},
+      "id": 34,
+      "options": {"displayMode": "gradient", "minVizHeight": 10, "minVizWidth": 0, "orientation": "horizontal", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "showUnfilled": true, "valueMode": "color"},
+      "targets": [
+        {"expr": "topk(10, sum by (context_path, context_method) (count_over_time({job=\"$job\"} | json | __error__=\"\" | message=\"HTTP_REQUEST\" | context_path=~\".+\" [$__range])))", "legendFormat": "{{context_method}} {{context_path}}", "refId": "A"}
+      ],
+      "title": "Top Endpoints",
+      "type": "bargauge"
+    },
+    {
+      "datasource": {"type": "loki", "uid": "${datasource}"},
+      "fieldConfig": {
+        "defaults": {"color": {"mode": "continuous-RdYlGr"}, "thresholds": {"mode": "absolute", "steps": [{"color": "#73BF69", "value": null}, {"color": "#FADE2A", "value": 200}, {"color": "#F2495C", "value": 500}]}, "unit": "ms", "min": 0},
+        "overrides": []
+      },
+      "gridPos": {"h": 6, "w": 6, "x": 6, "y": 18},
+      "id": 35,
+      "options": {"displayMode": "gradient", "minVizHeight": 10, "minVizWidth": 0, "orientation": "horizontal", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "showUnfilled": true, "valueMode": "color"},
+      "targets": [
+        {"expr": "topk(10, avg by (context_path, context_method) (avg_over_time({job=\"$job\"} | json | __error__=\"\" | message=\"HTTP_REQUEST\" | context_path=~\".+\" | unwrap context_duration_ms [$__range])))", "legendFormat": "{{context_method}} {{context_path}}", "refId": "A"}
+      ],
+      "title": "Slowest Endpoints",
+      "type": "bargauge"
+    },
+    {
+      "datasource": {"type": "loki", "uid": "${datasource}"},
+      "fieldConfig": {
+        "defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "#73BF69", "value": null}, {"color": "#FADE2A", "value": 100}, {"color": "#F2495C", "value": 300}]}, "unit": "ms", "custom": {"hideFrom": {"legend": false, "tooltip": false, "viz": false}}},
+        "overrides": []
+      },
+      "gridPos": {"h": 6, "w": 12, "x": 12, "y": 18},
+      "id": 36,
+      "maxDataPoints": 50,
+      "options": {"calculate": false, "cellGap": 1, "color": {"exponent": 0.5, "fill": "#73BF69", "mode": "scheme", "reverse": false, "scale": "exponential", "scheme": "RdYlGr", "steps": 64}, "exemplars": {"color": "rgba(255,0,255,0.7)"}, "filterValues": {"le": 1e-9}, "legend": {"show": true}, "rowsFrame": {"layout": "auto"}, "tooltip": {"show": true, "yHistogram": false}, "yAxis": {"axisPlacement": "left", "reverse": false, "unit": "ms"}},
+      "targets": [
+        {"expr": "sum(count_over_time({job=\"$job\"} | json | __error__=\"\" | message=\"HTTP_REQUEST\" | context_duration_ms <= 50 [$__interval]))", "legendFormat": "0-50", "refId": "A"},
+        {"expr": "sum(count_over_time({job=\"$job\"} | json | __error__=\"\" | message=\"HTTP_REQUEST\" | context_duration_ms > 50 | context_duration_ms <= 100 [$__interval]))", "legendFormat": "50-100", "refId": "B"},
+        {"expr": "sum(count_over_time({job=\"$job\"} | json | __error__=\"\" | message=\"HTTP_REQUEST\" | context_duration_ms > 100 | context_duration_ms <= 200 [$__interval]))", "legendFormat": "100-200", "refId": "C"},
+        {"expr": "sum(count_over_time({job=\"$job\"} | json | __error__=\"\" | message=\"HTTP_REQUEST\" | context_duration_ms > 200 | context_duration_ms <= 500 [$__interval]))", "legendFormat": "200-500", "refId": "D"},
+        {"expr": "sum(count_over_time({job=\"$job\"} | json | __error__=\"\" | message=\"HTTP_REQUEST\" | context_duration_ms > 500 [$__interval]))", "legendFormat": ">500", "refId": "E"}
+      ],
+      "title": "Latency Distribution",
+      "type": "timeseries"
+    },
+
+    {"collapsed": false, "gridPos": {"h": 1, "w": 24, "x": 0, "y": 26}, "id": 101, "panels": [], "title": "External Services", "type": "row"},
+    {
+      "datasource": {"type": "loki", "uid": "${datasource}"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "#73BF69", "value": null}, {"color": "#FADE2A", "value": 500}, {"color": "#F2495C", "value": 1000}]}, "unit": "ms"}},
+      "gridPos": {"h": 4, "w": 4, "x": 0, "y": 27},
       "id": 10,
-      "options": {
-        "cellHeight": "sm",
-        "footer": {
-          "countRows": false,
-          "fields": "",
-          "reducer": ["sum"],
-          "show": false
-        },
-        "showHeader": true,
-        "sortBy": [
-          {
-            "desc": true,
-            "displayName": "Requests"
-          }
-        ]
-      },
-      "pluginVersion": "10.0.0",
-      "targets": [
-        {
-          "datasource": {
-            "type": "loki",
-            "uid": "${datasource}"
-          },
-          "expr": "topk(10, sum by (user_id, workspace_id) (count_over_time({job=\"$job\"} | json | message=\"HTTP_REQUEST\" | user_id != \"\" [$__range])))",
-          "legendFormat": "",
-          "refId": "A"
-        }
-      ],
-      "title": "Top 10 Users by API Requests",
-      "transformations": [
-        {
-          "id": "reduce",
-          "options": {
-            "labelsToFields": true,
-            "reducers": ["sum"]
-          }
-        },
-        {
-          "id": "organize",
-          "options": {
-            "excludeByName": {},
-            "indexByName": {},
-            "renameByName": {
-              "Field": "User",
-              "Total": "Requests",
-              "user_id": "User ID",
-              "workspace_id": "Workspace"
-            }
-          }
-        }
-      ],
-      "type": "table"
+      "options": {"colorMode": "value", "graphMode": "area", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}},
+      "targets": [{"expr": "avg(avg_over_time({job=\"$job\"} | json | __error__=\"\" | message=\"HTTP_OUTBOUND\" | context_service=~\"$service\" | unwrap context_duration_ms [$__range]))", "refId": "A"}],
+      "title": "Avg Latency",
+      "type": "stat"
     },
     {
-      "datasource": {
-        "type": "loki",
-        "uid": "${datasource}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "bars",
-            "fillOpacity": 80,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "normal"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 14
-      },
+      "datasource": {"type": "loki", "uid": "${datasource}"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "#73BF69", "value": null}, {"color": "#FADE2A", "value": 1000}, {"color": "#F2495C", "value": 3000}]}, "unit": "ms"}},
+      "gridPos": {"h": 4, "w": 4, "x": 4, "y": 27},
       "id": 11,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "loki",
-            "uid": "${datasource}"
-          },
-          "expr": "sum by (user_id) (count_over_time({job=\"$job\"} | json | message=\"HTTP_REQUEST\" | user_id =~ \"$user_id\" [$__interval]))",
-          "legendFormat": "User {{user_id}}",
-          "refId": "A"
-        }
-      ],
-      "title": "User Activity Over Time",
-      "type": "timeseries"
+      "options": {"colorMode": "value", "graphMode": "area", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}},
+      "targets": [{"expr": "max(max_over_time({job=\"$job\"} | json | __error__=\"\" | message=\"HTTP_OUTBOUND\" | context_service=~\"$service\" | unwrap context_duration_ms [$__range]))", "refId": "A"}],
+      "title": "Max Latency",
+      "type": "stat"
     },
     {
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 22
-      },
-      "id": 102,
-      "panels": [],
-      "title": "External Services Health",
-      "type": "row"
-    },
-    {
-      "datasource": {
-        "type": "loki",
-        "uid": "${datasource}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "custom": {
-            "align": "auto",
-            "cellOptions": {
-              "type": "auto"
-            },
-            "inspect": false
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Success Rate"
-            },
-            "properties": [
-              {
-                "id": "unit",
-                "value": "percentunit"
-              },
-              {
-                "id": "custom.cellOptions",
-                "value": {
-                  "mode": "gradient",
-                  "type": "gauge"
-                }
-              },
-              {
-                "id": "thresholds",
-                "value": {
-                  "mode": "percentage",
-                  "steps": [
-                    {
-                      "color": "red",
-                      "value": null
-                    },
-                    {
-                      "color": "yellow",
-                      "value": 95
-                    },
-                    {
-                      "color": "green",
-                      "value": 99
-                    }
-                  ]
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Avg Latency"
-            },
-            "properties": [
-              {
-                "id": "unit",
-                "value": "ms"
-              },
-              {
-                "id": "thresholds",
-                "value": {
-                  "mode": "absolute",
-                  "steps": [
-                    {
-                      "color": "green",
-                      "value": null
-                    },
-                    {
-                      "color": "yellow",
-                      "value": 500
-                    },
-                    {
-                      "color": "red",
-                      "value": 1000
-                    }
-                  ]
-                }
-              },
-              {
-                "id": "custom.cellOptions",
-                "value": {
-                  "mode": "gradient",
-                  "type": "gauge"
-                }
-              }
-            ]
-          }
-        ]
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 24,
-        "x": 0,
-        "y": 23
-      },
+      "datasource": {"type": "loki", "uid": "${datasource}"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "#F2495C", "value": null}, {"color": "#FADE2A", "value": 0.95}, {"color": "#73BF69", "value": 0.99}]}, "unit": "percentunit", "min": 0, "max": 1}},
+      "gridPos": {"h": 4, "w": 4, "x": 8, "y": 27},
       "id": 12,
-      "options": {
-        "cellHeight": "sm",
-        "footer": {
-          "countRows": false,
-          "fields": "",
-          "reducer": ["sum"],
-          "show": false
-        },
-        "showHeader": true,
-        "sortBy": [
-          {
-            "desc": true,
-            "displayName": "Requests"
-          }
-        ]
-      },
-      "pluginVersion": "10.0.0",
-      "targets": [
-        {
-          "datasource": {
-            "type": "loki",
-            "uid": "${datasource}"
-          },
-          "expr": "sum by (service) (count_over_time({job=\"$job\"} | json | message=\"HTTP_OUTBOUND\" [$__range]))",
-          "legendFormat": "{{service}}",
-          "refId": "A"
-        }
-      ],
-      "title": "External Services Overview",
-      "transformations": [
-        {
-          "id": "reduce",
-          "options": {
-            "labelsToFields": true,
-            "reducers": ["sum"]
-          }
-        },
-        {
-          "id": "organize",
-          "options": {
-            "excludeByName": {},
-            "indexByName": {},
-            "renameByName": {
-              "Total": "Requests",
-              "service": "Service"
-            }
-          }
-        }
-      ],
-      "type": "table"
+      "options": {"orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "showThresholdLabels": false, "showThresholdMarkers": true},
+      "targets": [{"expr": "sum(count_over_time({job=\"$job\"} | json | __error__=\"\" | message=\"HTTP_OUTBOUND\" | context_service=~\"$service\" | context_status_code < 400 [$__range])) / sum(count_over_time({job=\"$job\"} | json | __error__=\"\" | message=\"HTTP_OUTBOUND\" | context_service=~\"$service\" [$__range]))", "refId": "A"}],
+      "title": "Success Rate",
+      "type": "gauge"
     },
     {
-      "datasource": {
-        "type": "loki",
-        "uid": "${datasource}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineInterpolation": "smooth",
-            "lineWidth": 2,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 31
-      },
+      "datasource": {"type": "loki", "uid": "${datasource}"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "#73BF69", "value": null}, {"color": "#FADE2A", "value": 10}, {"color": "#F2495C", "value": 50}]}, "unit": "short"}},
+      "gridPos": {"h": 4, "w": 4, "x": 12, "y": 27},
       "id": 13,
-      "options": {
-        "legend": {
-          "calcs": ["sum", "mean"],
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "loki",
-            "uid": "${datasource}"
-          },
-          "expr": "sum by (service) (count_over_time({job=\"$job\"} | json | message=\"HTTP_OUTBOUND\" | service =~ \"$service\" [$__interval]))",
-          "legendFormat": "{{service}}",
-          "refId": "A"
-        }
-      ],
-      "title": "External Service Requests Over Time",
-      "type": "timeseries"
+      "options": {"colorMode": "value", "graphMode": "area", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}},
+      "targets": [{"expr": "sum(count_over_time({job=\"$job\"} | json | __error__=\"\" | message=\"HTTP_OUTBOUND\" | context_service=~\"$service\" | context_status_code >= 400 [$__range]))", "refId": "A"}],
+      "title": "Errors",
+      "type": "stat"
     },
     {
-      "datasource": {
-        "type": "loki",
-        "uid": "${datasource}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineInterpolation": "smooth",
-            "lineWidth": 2,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "line+area"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 500
-              },
-              {
-                "color": "red",
-                "value": 1000
-              }
-            ]
-          },
-          "unit": "ms"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 31
-      },
+      "datasource": {"type": "loki", "uid": "${datasource}"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "#73BF69", "value": null}, {"color": "#FADE2A", "value": 5}, {"color": "#F2495C", "value": 20}]}, "unit": "short"}},
+      "gridPos": {"h": 4, "w": 4, "x": 16, "y": 27},
       "id": 14,
-      "options": {
-        "legend": {
-          "calcs": ["mean", "max"],
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "loki",
-            "uid": "${datasource}"
-          },
-          "expr": "avg by (service) (avg_over_time({job=\"$job\"} | json | message=\"HTTP_OUTBOUND\" | service =~ \"$service\" | unwrap duration_ms [$__interval]))",
-          "legendFormat": "{{service}}",
-          "refId": "A"
-        }
-      ],
-      "title": "External Service Latency",
-      "type": "timeseries"
+      "options": {"colorMode": "value", "graphMode": "area", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}},
+      "targets": [{"expr": "sum(count_over_time({job=\"$job\"} | json | __error__=\"\" | message=\"HTTP_OUTBOUND\" | context_service=~\"$service\" | context_status_code = 0 [$__range]))", "refId": "A"}],
+      "title": "Timeouts",
+      "type": "stat"
     },
     {
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 39
-      },
-      "id": 103,
-      "panels": [],
-      "title": "Queue Jobs",
-      "type": "row"
-    },
-    {
-      "datasource": {
-        "type": "loki",
-        "uid": "${datasource}"
-      },
+      "datasource": {"type": "loki", "uid": "${datasource}"},
       "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "bars",
-            "fillOpacity": 80,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "normal"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "unit": "short"
-        },
+        "defaults": {"color": {"mode": "thresholds"}, "custom": {"align": "auto", "cellOptions": {"type": "auto"}}, "thresholds": {"mode": "absolute", "steps": [{"color": "#73BF69", "value": null}]}},
         "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "processed"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "green",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "failed"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "red",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          }
+          {"matcher": {"id": "byName", "options": "Requests"}, "properties": [{"id": "custom.cellOptions", "value": {"mode": "gradient", "type": "gauge"}}, {"id": "color", "value": {"mode": "continuous-GrYlRd"}}]}
         ]
       },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 40
-      },
+      "gridPos": {"h": 4, "w": 8, "x": 0, "y": 31},
       "id": 15,
-      "options": {
-        "legend": {
-          "calcs": ["sum"],
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "loki",
-            "uid": "${datasource}"
-          },
-          "expr": "sum by (status) (count_over_time({job=\"$job\"} | json | message=\"JOB_PROCESSED\" [$__interval]))",
-          "legendFormat": "{{status}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Job Status Over Time",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "loki",
-        "uid": "${datasource}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "custom": {
-            "align": "auto",
-            "cellOptions": {
-              "type": "auto"
-            },
-            "inspect": false
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Count"
-            },
-            "properties": [
-              {
-                "id": "custom.cellOptions",
-                "value": {
-                  "mode": "gradient",
-                  "type": "gauge"
-                }
-              }
-            ]
-          }
-        ]
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 40
-      },
-      "id": 16,
-      "options": {
-        "cellHeight": "sm",
-        "footer": {
-          "countRows": false,
-          "fields": "",
-          "reducer": ["sum"],
-          "show": false
-        },
-        "showHeader": true,
-        "sortBy": [
-          {
-            "desc": true,
-            "displayName": "Count"
-          }
-        ]
-      },
-      "pluginVersion": "10.0.0",
-      "targets": [
-        {
-          "datasource": {
-            "type": "loki",
-            "uid": "${datasource}"
-          },
-          "expr": "topk(10, sum by (job_name) (count_over_time({job=\"$job\"} | json | message=\"JOB_PROCESSED\" [$__range])))",
-          "legendFormat": "",
-          "refId": "A"
-        }
-      ],
-      "title": "Top Jobs by Execution Count",
+      "options": {"cellHeight": "sm", "showHeader": true, "sortBy": [{"desc": true, "displayName": "Requests"}]},
+      "targets": [{"expr": "sum by (context_service) (count_over_time({job=\"$job\"} | json | __error__=\"\" | message=\"HTTP_OUTBOUND\" [$__range]))", "refId": "A"}],
+      "title": "Services Overview",
       "transformations": [
-        {
-          "id": "reduce",
-          "options": {
-            "labelsToFields": true,
-            "reducers": ["sum"]
-          }
-        },
-        {
-          "id": "organize",
-          "options": {
-            "excludeByName": {},
-            "indexByName": {},
-            "renameByName": {
-              "Total": "Count",
-              "job_name": "Job Name"
-            }
-          }
-        }
+        {"id": "reduce", "options": {"labelsToFields": true, "reducers": ["lastNotNull"]}},
+        {"id": "organize", "options": {"renameByName": {"Last *": "Requests", "context_service": "Service"}}}
       ],
       "type": "table"
     },
     {
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 48
+      "datasource": {"type": "loki", "uid": "${datasource}"},
+      "fieldConfig": {
+        "defaults": {"color": {"mode": "palette-classic"}, "custom": {"drawStyle": "line", "fillOpacity": 10, "lineInterpolation": "smooth", "lineWidth": 2, "showPoints": "auto", "thresholdsStyle": {"mode": "line+area"}}, "thresholds": {"mode": "absolute", "steps": [{"color": "#73BF69", "value": null}, {"color": "#FADE2A", "value": 500}, {"color": "#F2495C", "value": 1000}]}, "unit": "ms"}
       },
-      "id": 104,
-      "panels": [],
-      "title": "Exceptions",
-      "type": "row"
+      "gridPos": {"h": 8, "w": 8, "x": 8, "y": 31},
+      "id": 16,
+      "options": {"legend": {"calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi"}},
+      "targets": [
+        {"expr": "avg(avg_over_time({job=\"$job\"} | json | __error__=\"\" | message=\"HTTP_OUTBOUND\" | context_service=~\"$service\" | unwrap context_duration_ms [$__interval]))", "legendFormat": "Avg", "refId": "A"},
+        {"expr": "max(max_over_time({job=\"$job\"} | json | __error__=\"\" | message=\"HTTP_OUTBOUND\" | context_service=~\"$service\" | unwrap context_duration_ms [$__interval]))", "legendFormat": "Max", "refId": "B"},
+        {"expr": "avg(quantile_over_time(0.95, {job=\"$job\"} | json | __error__=\"\" | message=\"HTTP_OUTBOUND\" | context_service=~\"$service\" | unwrap context_duration_ms [$__interval]))", "legendFormat": "P95", "refId": "C"}
+      ],
+      "title": "Response Time",
+      "type": "timeseries"
     },
     {
-      "datasource": {
-        "type": "loki",
-        "uid": "${datasource}"
-      },
+      "datasource": {"type": "loki", "uid": "${datasource}"},
       "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "bars",
-            "fillOpacity": 80,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "normal"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              }
-            ]
-          },
-          "unit": "short"
-        },
-        "overrides": []
+        "defaults": {"color": {"mode": "palette-classic"}, "custom": {"drawStyle": "line", "fillOpacity": 20, "lineInterpolation": "smooth", "lineWidth": 2, "showPoints": "auto", "stacking": {"mode": "none"}}, "unit": "short"},
+        "overrides": [
+          {"matcher": {"id": "byName", "options": "2xx"}, "properties": [{"id": "color", "value": {"fixedColor": "#73BF69", "mode": "fixed"}}]},
+          {"matcher": {"id": "byName", "options": "4xx"}, "properties": [{"id": "color", "value": {"fixedColor": "#FADE2A", "mode": "fixed"}}]},
+          {"matcher": {"id": "byName", "options": "5xx"}, "properties": [{"id": "color", "value": {"fixedColor": "#F2495C", "mode": "fixed"}}]},
+          {"matcher": {"id": "byName", "options": "Timeout"}, "properties": [{"id": "color", "value": {"fixedColor": "#B877D9", "mode": "fixed"}}]}
+        ]
       },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 49
-      },
+      "gridPos": {"h": 8, "w": 8, "x": 16, "y": 31},
       "id": 17,
-      "options": {
-        "legend": {
-          "calcs": ["sum"],
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
+      "options": {"legend": {"calcs": ["sum"], "displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi"}},
       "targets": [
-        {
-          "datasource": {
-            "type": "loki",
-            "uid": "${datasource}"
-          },
-          "expr": "sum by (exception_class) (count_over_time({job=\"$job\"} | json | message=\"EXCEPTION\" [$__interval]))",
-          "legendFormat": "{{exception_class}}",
-          "refId": "A"
-        }
+        {"expr": "sum(count_over_time({job=\"$job\"} | json | __error__=\"\" | message=\"HTTP_OUTBOUND\" | context_service=~\"$service\" | context_status_code >= 200 | context_status_code < 300 [$__interval]))", "legendFormat": "2xx", "refId": "A"},
+        {"expr": "sum(count_over_time({job=\"$job\"} | json | __error__=\"\" | message=\"HTTP_OUTBOUND\" | context_service=~\"$service\" | context_status_code >= 400 | context_status_code < 500 [$__interval]))", "legendFormat": "4xx", "refId": "B"},
+        {"expr": "sum(count_over_time({job=\"$job\"} | json | __error__=\"\" | message=\"HTTP_OUTBOUND\" | context_service=~\"$service\" | context_status_code >= 500 [$__interval]))", "legendFormat": "5xx", "refId": "C"},
+        {"expr": "sum(count_over_time({job=\"$job\"} | json | __error__=\"\" | message=\"HTTP_OUTBOUND\" | context_service=~\"$service\" | context_status_code = 0 [$__interval]))", "legendFormat": "Timeout", "refId": "D"}
       ],
+      "title": "Status Over Time",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "loki", "uid": "${datasource}"},
+      "fieldConfig": {
+        "defaults": {"color": {"mode": "thresholds"}, "custom": {"align": "auto", "cellOptions": {"type": "auto"}}, "thresholds": {"mode": "absolute", "steps": [{"color": "#73BF69", "value": null}]}},
+        "overrides": [{"matcher": {"id": "byName", "options": "Count"}, "properties": [{"id": "custom.cellOptions", "value": {"mode": "gradient", "type": "gauge"}}, {"id": "color", "value": {"mode": "continuous-GrYlRd"}}]}]
+      },
+      "gridPos": {"h": 4, "w": 8, "x": 0, "y": 35},
+      "id": 18,
+      "options": {"cellHeight": "sm", "showHeader": true, "sortBy": [{"desc": true, "displayName": "Count"}]},
+      "targets": [{"expr": "topk(10, sum by (context_path, context_method) (count_over_time({job=\"$job\"} | json | __error__=\"\" | message=\"HTTP_OUTBOUND\" | context_service=~\"$service\" | context_path=~\".+\" [$__range])))", "refId": "A"}],
+      "title": "Top Endpoints",
+      "transformations": [
+        {"id": "reduce", "options": {"includeTimeField": false, "labelsToFields": true, "mode": "seriesToRows", "reducers": ["lastNotNull"]}},
+        {"id": "organize", "options": {"excludeByName": {"Field": true}, "renameByName": {"Last *": "Count", "context_method": "Method", "context_path": "Path"}}}
+      ],
+      "type": "table"
+    },
+
+    {"collapsed": false, "gridPos": {"h": 1, "w": 24, "x": 0, "y": 39}, "id": 102, "panels": [], "title": "User Analytics", "type": "row"},
+    {
+      "datasource": {"type": "loki", "uid": "${datasource}"},
+      "fieldConfig": {
+        "defaults": {"color": {"mode": "thresholds"}, "custom": {"align": "auto", "cellOptions": {"type": "auto"}}, "thresholds": {"mode": "absolute", "steps": [{"color": "#73BF69", "value": null}]}},
+        "overrides": [{"matcher": {"id": "byName", "options": "Requests"}, "properties": [{"id": "custom.cellOptions", "value": {"mode": "gradient", "type": "gauge"}}, {"id": "color", "value": {"mode": "continuous-GrYlRd"}}]}]
+      },
+      "gridPos": {"h": 6, "w": 12, "x": 0, "y": 40},
+      "id": 19,
+      "options": {"cellHeight": "sm", "showHeader": true, "sortBy": [{"desc": true, "displayName": "Requests"}]},
+      "targets": [{"expr": "topk(10, sum by (context_user_id, context_workspace_id) (count_over_time({job=\"$job\"} | json | __error__=\"\" | message=\"HTTP_REQUEST\" | context_user_id=~\".+\" [$__range])))", "refId": "A"}],
+      "title": "Top Users",
+      "transformations": [
+        {"id": "reduce", "options": {"labelsToFields": true, "reducers": ["lastNotNull"]}},
+        {"id": "organize", "options": {"renameByName": {"Last *": "Requests", "context_user_id": "User ID", "context_workspace_id": "Workspace"}}}
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": {"type": "loki", "uid": "${datasource}"},
+      "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "custom": {"drawStyle": "bars", "fillOpacity": 80, "lineWidth": 1, "stacking": {"mode": "normal"}}, "unit": "short"}},
+      "gridPos": {"h": 6, "w": 12, "x": 12, "y": 40},
+      "id": 20,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi"}},
+      "targets": [{"expr": "sum by (context_user_id) (count_over_time({job=\"$job\"} | json | __error__=\"\" | message=\"HTTP_REQUEST\" | context_user_id =~ \"$user_id\" [$__interval]))", "legendFormat": "User {{context_user_id}}", "refId": "A"}],
+      "title": "User Activity",
+      "type": "timeseries"
+    },
+
+    {"collapsed": false, "gridPos": {"h": 1, "w": 24, "x": 0, "y": 46}, "id": 103, "panels": [], "title": "Queue Jobs", "type": "row"},
+    {
+      "datasource": {"type": "loki", "uid": "${datasource}"},
+      "fieldConfig": {
+        "defaults": {"color": {"mode": "palette-classic"}, "custom": {"drawStyle": "bars", "fillOpacity": 80, "stacking": {"mode": "normal"}}, "unit": "short"},
+        "overrides": [
+          {"matcher": {"id": "byName", "options": "processed"}, "properties": [{"id": "color", "value": {"fixedColor": "#73BF69", "mode": "fixed"}}]},
+          {"matcher": {"id": "byName", "options": "failed"}, "properties": [{"id": "color", "value": {"fixedColor": "#F2495C", "mode": "fixed"}}]}
+        ]
+      },
+      "gridPos": {"h": 6, "w": 12, "x": 0, "y": 47},
+      "id": 21,
+      "options": {"legend": {"calcs": ["sum"], "displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi"}},
+      "targets": [{"expr": "sum by (context_status) (count_over_time({job=\"$job\"} | json | __error__=\"\" | message=\"JOB_PROCESSED\" [$__interval]))", "legendFormat": "{{context_status}}", "refId": "A"}],
+      "title": "Job Status",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "loki", "uid": "${datasource}"},
+      "fieldConfig": {
+        "defaults": {"color": {"mode": "thresholds"}, "custom": {"align": "auto", "cellOptions": {"type": "auto"}}, "thresholds": {"mode": "absolute", "steps": [{"color": "#73BF69", "value": null}]}},
+        "overrides": [{"matcher": {"id": "byName", "options": "Count"}, "properties": [{"id": "custom.cellOptions", "value": {"mode": "gradient", "type": "gauge"}}]}]
+      },
+      "gridPos": {"h": 6, "w": 12, "x": 12, "y": 47},
+      "id": 22,
+      "options": {"cellHeight": "sm", "showHeader": true, "sortBy": [{"desc": true, "displayName": "Count"}]},
+      "targets": [{"expr": "topk(10, sum by (context_job_name) (count_over_time({job=\"$job\"} | json | __error__=\"\" | message=\"JOB_PROCESSED\" [$__range])))", "refId": "A"}],
+      "title": "Top Jobs",
+      "transformations": [
+        {"id": "reduce", "options": {"labelsToFields": true, "reducers": ["lastNotNull"]}},
+        {"id": "organize", "options": {"renameByName": {"Last *": "Count", "context_job_name": "Job Name"}}}
+      ],
+      "type": "table"
+    },
+
+    {"collapsed": false, "gridPos": {"h": 1, "w": 24, "x": 0, "y": 53}, "id": 104, "panels": [], "title": "Exceptions", "type": "row"},
+    {
+      "datasource": {"type": "loki", "uid": "${datasource}"},
+      "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "custom": {"drawStyle": "bars", "fillOpacity": 80, "stacking": {"mode": "normal"}}, "thresholds": {"mode": "absolute", "steps": [{"color": "#F2495C", "value": null}]}, "unit": "short"}},
+      "gridPos": {"h": 6, "w": 12, "x": 0, "y": 54},
+      "id": 23,
+      "options": {"legend": {"calcs": ["sum"], "displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi"}},
+      "targets": [{"expr": "sum by (context_exception_class) (count_over_time({job=\"$job\"} | json | __error__=\"\" | message=\"EXCEPTION\" [$__interval]))", "legendFormat": "{{context_exception_class}}", "refId": "A"}],
       "title": "Exceptions Over Time",
       "type": "timeseries"
     },
     {
-      "datasource": {
-        "type": "loki",
-        "uid": "${datasource}"
-      },
+      "datasource": {"type": "loki", "uid": "${datasource}"},
       "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "custom": {
-            "align": "auto",
-            "cellOptions": {
-              "type": "auto"
-            },
-            "inspect": false
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Count"
-            },
-            "properties": [
-              {
-                "id": "custom.cellOptions",
-                "value": {
-                  "mode": "gradient",
-                  "type": "gauge"
-                }
-              },
-              {
-                "id": "color",
-                "value": {
-                  "mode": "continuous-RdYlGr"
-                }
-              }
-            ]
-          }
-        ]
+        "defaults": {"color": {"mode": "thresholds"}, "custom": {"align": "auto", "cellOptions": {"type": "auto"}}, "thresholds": {"mode": "absolute", "steps": [{"color": "#F2495C", "value": null}]}},
+        "overrides": [{"matcher": {"id": "byName", "options": "Count"}, "properties": [{"id": "custom.cellOptions", "value": {"mode": "gradient", "type": "gauge"}}, {"id": "color", "value": {"mode": "continuous-RdYlGr"}}]}]
       },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 49
-      },
-      "id": 18,
-      "options": {
-        "cellHeight": "sm",
-        "footer": {
-          "countRows": false,
-          "fields": "",
-          "reducer": ["sum"],
-          "show": false
-        },
-        "showHeader": true,
-        "sortBy": [
-          {
-            "desc": true,
-            "displayName": "Count"
-          }
-        ]
-      },
-      "pluginVersion": "10.0.0",
-      "targets": [
-        {
-          "datasource": {
-            "type": "loki",
-            "uid": "${datasource}"
-          },
-          "expr": "topk(10, sum by (exception_class) (count_over_time({job=\"$job\"} | json | message=\"EXCEPTION\" [$__range])))",
-          "legendFormat": "",
-          "refId": "A"
-        }
-      ],
+      "gridPos": {"h": 6, "w": 12, "x": 12, "y": 54},
+      "id": 24,
+      "options": {"cellHeight": "sm", "showHeader": true, "sortBy": [{"desc": true, "displayName": "Count"}]},
+      "targets": [{"expr": "topk(10, sum by (context_exception_class) (count_over_time({job=\"$job\"} | json | __error__=\"\" | message=\"EXCEPTION\" [$__range])))", "refId": "A"}],
       "title": "Top Exceptions",
       "transformations": [
-        {
-          "id": "reduce",
-          "options": {
-            "labelsToFields": true,
-            "reducers": ["sum"]
-          }
-        },
-        {
-          "id": "organize",
-          "options": {
-            "excludeByName": {},
-            "indexByName": {},
-            "renameByName": {
-              "Total": "Count",
-              "exception_class": "Exception Class"
-            }
-          }
-        }
+        {"id": "reduce", "options": {"labelsToFields": true, "reducers": ["lastNotNull"]}},
+        {"id": "organize", "options": {"renameByName": {"Last *": "Count", "context_exception_class": "Exception"}}}
       ],
       "type": "table"
     },
+
+    {"collapsed": false, "gridPos": {"h": 1, "w": 24, "x": 0, "y": 60}, "id": 105, "panels": [], "title": "Logs", "type": "row"},
     {
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 57
-      },
-      "id": 105,
-      "panels": [],
-      "title": "Recent Logs",
-      "type": "row"
-    },
-    {
-      "datasource": {
-        "type": "loki",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "h": 10,
-        "w": 24,
-        "x": 0,
-        "y": 58
-      },
-      "id": 19,
-      "options": {
-        "dedupStrategy": "none",
-        "enableLogDetails": true,
-        "prettifyLogMessage": true,
-        "showCommonLabels": false,
-        "showLabels": false,
-        "showTime": true,
-        "sortOrder": "Descending",
-        "wrapLogMessage": true
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "loki",
-            "uid": "${datasource}"
-          },
-          "expr": "{job=\"$job\"} | json | message =~ \"HTTP_REQUEST|HTTP_OUTBOUND|JOB_PROCESSED|EXCEPTION\"",
-          "refId": "A"
-        }
-      ],
+      "datasource": {"type": "loki", "uid": "${datasource}"},
+      "gridPos": {"h": 10, "w": 24, "x": 0, "y": 61},
+      "id": 25,
+      "options": {"dedupStrategy": "none", "enableLogDetails": true, "prettifyLogMessage": true, "showLabels": false, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": true},
+      "targets": [{"expr": "{job=\"$job\"} | json | __error__=\"\" | message =~ \"HTTP_REQUEST|HTTP_OUTBOUND|JOB_PROCESSED|EXCEPTION\"", "refId": "A"}],
       "title": "Live Logs",
       "type": "logs"
     }
   ],
   "refresh": "30s",
   "schemaVersion": 38,
-  "style": "dark",
-  "tags": ["observatory", "laravel", "api-monitoring"],
+  "tags": ["observatory", "laravel", "monitoring"],
   "templating": {
     "list": [
-      {
-        "current": {},
-        "hide": 0,
-        "includeAll": false,
-        "label": "Data Source",
-        "multi": false,
-        "name": "datasource",
-        "options": [],
-        "query": "loki",
-        "queryValue": "",
-        "refresh": 1,
-        "regex": "",
-        "skipUrlSync": false,
-        "type": "datasource"
-      },
-      {
-        "current": {
-          "selected": false,
-          "text": "laravel-observatory",
-          "value": "laravel-observatory"
-        },
-        "hide": 0,
-        "includeAll": false,
-        "label": "Job",
-        "multi": false,
-        "name": "job",
-        "options": [
-          {
-            "selected": true,
-            "text": "laravel-observatory",
-            "value": "laravel-observatory"
-          }
-        ],
-        "query": "laravel-observatory",
-        "skipUrlSync": false,
-        "type": "textbox"
-      },
-      {
-        "allValue": ".*",
-        "current": {
-          "selected": true,
-          "text": "All",
-          "value": "$__all"
-        },
-        "datasource": {
-          "type": "loki",
-          "uid": "${datasource}"
-        },
-        "definition": "",
-        "hide": 0,
-        "includeAll": true,
-        "label": "Service",
-        "multi": true,
-        "name": "service",
-        "options": [],
-        "query": {
-          "label": "service",
-          "refId": "LokiVariableQueryEditor-VariableQuery",
-          "stream": "{job=\"$job\"} | json | message=\"HTTP_OUTBOUND\"",
-          "type": 1
-        },
-        "refresh": 2,
-        "regex": "",
-        "skipUrlSync": false,
-        "sort": 1,
-        "type": "query"
-      },
-      {
-        "allValue": ".*",
-        "current": {
-          "selected": true,
-          "text": "All",
-          "value": "$__all"
-        },
-        "datasource": {
-          "type": "loki",
-          "uid": "${datasource}"
-        },
-        "definition": "",
-        "hide": 0,
-        "includeAll": true,
-        "label": "User ID",
-        "multi": true,
-        "name": "user_id",
-        "options": [],
-        "query": {
-          "label": "user_id",
-          "refId": "LokiVariableQueryEditor-VariableQuery",
-          "stream": "{job=\"$job\"} | json | message=\"HTTP_REQUEST\" | user_id != \"\"",
-          "type": 1
-        },
-        "refresh": 2,
-        "regex": "",
-        "skipUrlSync": false,
-        "sort": 1,
-        "type": "query"
-      }
+      {"current": {}, "hide": 0, "includeAll": false, "label": "Data Source", "name": "datasource", "options": [], "query": "loki", "refresh": 1, "type": "datasource"},
+      {"current": {"text": "laravel-observatory", "value": "laravel-observatory"}, "hide": 0, "label": "Job", "name": "job", "options": [{"selected": true, "text": "laravel-observatory", "value": "laravel-observatory"}], "query": "laravel-observatory", "type": "textbox"},
+      {"allValue": ".*", "current": {"selected": true, "text": "All", "value": "$__all"}, "datasource": {"type": "loki", "uid": "${datasource}"}, "hide": 0, "includeAll": true, "label": "Service", "multi": true, "name": "service", "options": [], "query": {"label": "service", "stream": "{job=\"$job\", message=\"HTTP_OUTBOUND\"}", "type": 1}, "refresh": 2, "sort": 1, "type": "query"},
+      {"allValue": ".*", "current": {"selected": true, "text": "All", "value": "$__all"}, "datasource": {"type": "loki", "uid": "${datasource}"}, "hide": 0, "includeAll": true, "label": "User", "multi": true, "name": "user_id", "options": [], "query": {"label": "user_id", "stream": "{job=\"$job\", message=\"HTTP_REQUEST\"}", "type": 1}, "refresh": 2, "sort": 1, "type": "query"}
     ]
   },
-  "time": {
-    "from": "now-6h",
-    "to": "now"
-  },
-  "timepicker": {
-    "refresh_intervals": ["5s", "10s", "30s", "1m", "5m", "15m", "30m", "1h", "2h", "1d"]
-  },
+  "time": {"from": "now-6h", "to": "now"},
+  "timepicker": {"refresh_intervals": ["5s", "10s", "30s", "1m", "5m", "15m", "30m", "1h"]},
   "timezone": "",
-  "title": "Laravel Observatory Dashboard",
-  "uid": "observatory-main",
-  "version": 1,
-  "weekStart": ""
+  "title": "Laravel Observatory",
+  "uid": "observatory",
+  "version": 1
 }

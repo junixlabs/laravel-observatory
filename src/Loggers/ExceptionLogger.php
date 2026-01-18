@@ -2,7 +2,6 @@
 
 namespace JunixLabs\Observatory\Loggers;
 
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use JunixLabs\Observatory\Support\SensitiveDataMasker;
 
@@ -15,15 +14,13 @@ class ExceptionLogger
     public function __construct(?SensitiveDataMasker $masker = null)
     {
         $this->masker = $masker ?? SensitiveDataMasker::fromConfig();
-        $this->config = config('observatory.exception_logger', []);
+        $this->config = config('observatory.exceptions', []);
     }
 
-    /**
-     * Check if logger is enabled
-     */
     public function isEnabled(): bool
     {
-        return config('observatory.exception_logger.enabled', false);
+        return config('observatory.enabled', true)
+            && config('observatory.exceptions.enabled', true);
     }
 
     /**
@@ -40,7 +37,7 @@ class ExceptionLogger
         }
 
         $logData = $this->buildLogData($exception, $context);
-        $channel = $this->config['channel'] ?? 'daily';
+        $channel = config('observatory.log_channel', 'observatory');
 
         Log::channel($channel)->error('EXCEPTION', $logData);
     }
@@ -127,14 +124,8 @@ class ExceptionLogger
             ];
         }
 
-        // Add labels for log aggregators
-        $data['labels'] = array_merge(
-            $this->config['labels'] ?? [],
-            [
-                'exception_class' => $this->sanitizeLabel(class_basename($exception)),
-                'severity' => $this->getSeverity($exception),
-            ]
-        );
+        // Add environment label
+        $data['environment'] = config('observatory.labels.environment', config('app.env'));
 
         return $data;
     }
@@ -196,25 +187,32 @@ class ExceptionLogger
      */
     protected function getUserContext(): array
     {
-        if (! function_exists('auth') || ! auth()->check()) {
+        try {
+            $guard = auth()->guard();
+            if (! $guard->check()) {
+                return [];
+            }
+
+            $user = $guard->user();
+            $context = [
+                'id' => $user->id ?? null,
+            ];
+
+            // Add custom headers from request (uses inbound config)
+            if (function_exists('request') && request()) {
+                $customHeaders = config('observatory.inbound.custom_headers', []);
+                foreach ($customHeaders as $headerName => $fieldName) {
+                    $value = request()->header($headerName);
+                    if ($value !== null) {
+                        $context[$fieldName] = $value;
+                    }
+                }
+            }
+
+            return $context;
+        } catch (\Throwable) {
             return [];
         }
-
-        $user = auth()->user();
-
-        $context = [
-            'id' => $user->id ?? null,
-        ];
-
-        // Add workspace if available
-        if (function_exists('request') && request()) {
-            $workspaceId = request()->header('X-Workspace-Id');
-            if ($workspaceId) {
-                $context['workspace_id'] = $workspaceId;
-            }
-        }
-
-        return $context;
     }
 
     /**

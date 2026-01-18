@@ -22,20 +22,15 @@ class InboundRequestLogger
     public function __construct(?SensitiveDataMasker $masker = null)
     {
         $this->masker = $masker ?? SensitiveDataMasker::fromConfig();
-        $this->config = config('observatory.inbound_logger', []);
+        $this->config = config('observatory.inbound', []);
     }
 
-    /**
-     * Check if logger is enabled
-     */
     public function isEnabled(): bool
     {
-        return config('observatory.inbound_logger.enabled', false);
+        return config('observatory.enabled', true)
+            && config('observatory.inbound.enabled', true);
     }
 
-    /**
-     * Start timing the request
-     */
     public function start(Request $request): void
     {
         $this->startTime = microtime(true);
@@ -43,9 +38,6 @@ class InboundRequestLogger
         $this->requestId = $request->attributes->get('request_id');
     }
 
-    /**
-     * Log the completed request
-     */
     public function log(Request $request, Response $response): void
     {
         if (! $this->isEnabled()) {
@@ -57,27 +49,21 @@ class InboundRequestLogger
         }
 
         $duration = $this->startTime ? (microtime(true) - $this->startTime) * 1000 : 0;
-        $memoryUsed = $this->startMemory ? memory_get_usage(true) - $this->startMemory : 0;
         $peakMemory = memory_get_peak_usage(true);
 
-        $logData = $this->buildLogData($request, $response, $duration, $memoryUsed, $peakMemory);
+        $logData = $this->buildLogData($request, $response, $duration, $peakMemory);
 
-        $channel = $this->config['channel'] ?? 'daily';
+        $channel = config('observatory.log_channel', 'observatory');
 
         Log::channel($channel)->info('HTTP_REQUEST', $logData);
 
-        // Reset for next request
         $this->startTime = null;
         $this->startMemory = null;
         $this->requestId = null;
     }
 
-    /**
-     * Check if request should be logged
-     */
     public function shouldLog(Request $request, Response $response): bool
     {
-        // Check excluded paths
         $excludePaths = $this->config['exclude_paths'] ?? [];
         $path = $request->path();
 
@@ -87,13 +73,6 @@ class InboundRequestLogger
             }
         }
 
-        // Check status code filter
-        $onlyStatusCodes = $this->config['only_status_codes'] ?? [];
-        if (! empty($onlyStatusCodes) && ! in_array($response->getStatusCode(), $onlyStatusCodes)) {
-            return false;
-        }
-
-        // Check slow threshold
         $slowThreshold = $this->config['slow_threshold_ms'] ?? 0;
         if ($slowThreshold > 0 && $this->startTime) {
             $duration = (microtime(true) - $this->startTime) * 1000;
@@ -105,14 +84,10 @@ class InboundRequestLogger
         return true;
     }
 
-    /**
-     * Build the log data array
-     */
     protected function buildLogData(
         Request $request,
         Response $response,
         float $duration,
-        int $memoryUsed,
         int $peakMemory
     ): array {
         $data = [
@@ -120,56 +95,33 @@ class InboundRequestLogger
             'type' => 'inbound',
             'method' => $request->method(),
             'url' => $request->fullUrl(),
-            'host' => $request->getHost(),
             'path' => $request->path(),
             'route' => $this->getRouteName($request),
             'status_code' => $response->getStatusCode(),
             'duration_ms' => round($duration, 2),
             'ip' => $request->ip(),
             'user_agent' => $request->userAgent(),
-            'timestamp' => now()->toIso8601String(),
+            'memory_mb' => round($peakMemory / 1024 / 1024, 2),
         ];
 
-        // Add memory info
-        if ($this->config['log_memory'] ?? true) {
-            $data['memory'] = [
-                'used_mb' => round($memoryUsed / 1024 / 1024, 2),
-                'peak_mb' => round($peakMemory / 1024 / 1024, 2),
-            ];
-        }
-
         // Add user info
-        if ($this->config['log_user'] ?? true) {
-            $user = $request->user();
-            if ($user) {
-                $data['user_id'] = $user->id ?? null;
-            }
+        $user = $request->user();
+        if ($user) {
+            $data['user_id'] = $user->id ?? null;
+        }
 
-            // Add workspace_id from header if exists
-            $workspaceId = $request->header('X-Workspace-Id');
-            if ($workspaceId) {
-                $data['workspace_id'] = $workspaceId;
+        // Add custom headers (configurable)
+        $customHeaders = $this->config['custom_headers'] ?? [];
+        foreach ($customHeaders as $headerName => $fieldName) {
+            $value = $request->header($headerName);
+            if ($value !== null) {
+                $data[$fieldName] = $value;
             }
         }
 
-        // Add request headers
-        if ($this->config['log_request_headers'] ?? true) {
-            $data['request_headers'] = $this->masker->filterHeaders($request->headers->all());
-        }
-
-        // Add request body
-        if ($this->config['log_request_body'] ?? false) {
+        // Add request body if enabled
+        if ($this->config['log_body'] ?? false) {
             $data['request_body'] = $this->getRequestBody($request);
-        }
-
-        // Add response headers
-        if ($this->config['log_response_headers'] ?? false) {
-            $data['response_headers'] = $this->masker->filterHeaders($response->headers->all());
-        }
-
-        // Add response body
-        if ($this->config['log_response_body'] ?? false) {
-            $data['response_body'] = $this->getResponseBody($response);
         }
 
         // Add query parameters
@@ -178,77 +130,34 @@ class InboundRequestLogger
             $data['query_params'] = $this->masker->maskArray($queryParams);
         }
 
-        // Add custom context
-        $customContext = $this->config['custom_context'] ?? [];
-        if (! empty($customContext)) {
-            $data['context'] = $customContext;
-        }
-
-        // Add labels for log aggregators
-        $labels = $this->config['labels'] ?? [];
-        if (! empty($labels)) {
-            $data['labels'] = $labels;
-        }
+        // Add environment label
+        $data['environment'] = config('observatory.labels.environment', config('app.env'));
 
         return $data;
     }
 
-    /**
-     * Get masked request body
-     */
     protected function getRequestBody(Request $request): mixed
     {
-        $maxSize = $this->config['max_request_body_size'] ?? 64000;
-
-        // Try to get as array first (for JSON/form data)
+        $maxSize = $this->config['max_body_size'] ?? 64000;
         $content = $request->all();
 
         if (! empty($content)) {
             return $this->masker->maskArray($content);
         }
 
-        // Fall back to raw content
         $rawContent = $request->getContent();
-
         if (empty($rawContent)) {
             return null;
         }
 
-        // Try to parse as JSON
         $decoded = json_decode($rawContent, true);
         if (json_last_error() === JSON_ERROR_NONE) {
             return $this->masker->maskArray($decoded);
         }
 
-        // Return truncated raw content
         return $this->masker->truncate($rawContent, $maxSize);
     }
 
-    /**
-     * Get masked response body
-     */
-    protected function getResponseBody(Response $response): mixed
-    {
-        $maxSize = $this->config['max_response_body_size'] ?? 64000;
-        $content = $response->getContent();
-
-        if (empty($content)) {
-            return null;
-        }
-
-        // Try to parse as JSON
-        $decoded = json_decode($content, true);
-        if (json_last_error() === JSON_ERROR_NONE) {
-            return $this->masker->maskArray($decoded);
-        }
-
-        // Return truncated raw content
-        return $this->masker->truncate($content, $maxSize);
-    }
-
-    /**
-     * Get route name or pattern
-     */
     protected function getRouteName(Request $request): string
     {
         $route = $request->route();
@@ -257,19 +166,9 @@ class InboundRequestLogger
             return 'unknown';
         }
 
-        $name = $route->getName();
-        if ($name) {
-            return $name;
-        }
-
-        $uri = $route->uri();
-
-        return $uri ?: 'unknown';
+        return $route->getName() ?: $route->uri() ?: 'unknown';
     }
 
-    /**
-     * Set custom request ID
-     */
     public function setRequestId(string $requestId): self
     {
         $this->requestId = $requestId;
