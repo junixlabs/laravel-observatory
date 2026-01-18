@@ -7,6 +7,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-01-18
+
+### Added
+- **Zero Configuration** - Package works immediately after install with sensible defaults
+- **Auto-registered Log Channel** - `observatory` channel automatically configured
+  - Writes to `storage/logs/observatory.log`
+  - JSON format (Loki/ELK compatible)
+  - Daily rotation, 14 days retention
+- **Custom Headers Support** - Configurable header extraction for multi-tenant apps
+  - Configure via `inbound.custom_headers` option
+  - Supports workspace, tenant, correlation IDs, etc.
+- **Exporter Config Option** - Added `exporter` config for switching between prometheus/sidmonitor
+
+### Changed
+- **Config Structure Simplified** - Merged logger configs into main sections
+  - `inbound_logger` → `inbound`
+  - `outbound_logger` → `outbound`
+  - `job_logger` → `jobs`
+  - `exception_logger` → `exceptions`
+- **Default Log Channel** - Changed from `daily` to `observatory` (auto-registered)
+- **All Loggers Enabled by Default** - No configuration needed to start logging
+- **Prometheus Disabled by Default** - Now optional, enable with `OBSERVATORY_PROMETHEUS_ENABLED=true`
+- **Improved Grafana Dashboard** - Added Bar Gauge, Gauge panels, better visualizations
+- **README Rewritten** - Accurate documentation reflecting current config structure
+
+### Fixed
+- Prometheus metrics endpoint removed 'web' middleware (was causing CSRF issues)
+- Fixed `auth()` type hints in ExceptionLogger for PHPStan compatibility
+- Removed unused `$memoryUsed` parameter in InboundRequestLogger
+
+### Removed
+- Hardcoded `X-Workspace-Id` header - Use `custom_headers` config instead
+- `service-health-dashboard.json` - Merged into main dashboard
+
+### Breaking Changes
+- Config structure changed - Re-publish config if upgrading:
+  ```bash
+  php artisan vendor:publish --tag=observatory-config --force
+  ```
+- `X-Workspace-Id` no longer automatically extracted - Add to `custom_headers` if needed
+
 ## [1.2.0] - 2026-01-14
 
 ### Added
