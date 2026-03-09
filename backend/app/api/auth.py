@@ -2,20 +2,23 @@
 Authentication API endpoints for user registration, login, and profile management.
 """
 import secrets
-from fastapi import APIRouter, Depends, HTTPException, status, Header
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials, HTTPBasic, HTTPBasicCredentials
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
 from typing import Optional
 
-from app.database import get_db
+from fastapi import APIRouter, Depends, Header, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBasic, HTTPBasicCredentials, HTTPBearer
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.config import get_settings
-from app.models.auth import UserRegister, UserLogin, UserResponse, TokenResponse, UserUpdate
+from app.database import get_db
+from app.models.auth import TokenResponse, UserLogin, UserRegister, UserResponse, UserUpdate
 from app.models.database import User
 from app.services.auth import (
+    create_access_token,
     hash_password,
     verify_password,
-    create_access_token,
+)
+from app.services.auth import (
     get_current_user as get_user_from_token,
 )
 

@@ -1,11 +1,12 @@
-from fastapi import APIRouter, Depends, Query, HTTPException
-from typing import Optional
-import math
 import logging
+import math
+from typing import Optional
 
+from fastapi import APIRouter, Depends, HTTPException, Query
+
+from app.api.auth import verify_auth
 from app.models.log import LogEntry, PaginatedResponse
 from app.services.clickhouse import get_clickhouse_client
-from app.api.auth import verify_auth
 
 logger = logging.getLogger(__name__)
 

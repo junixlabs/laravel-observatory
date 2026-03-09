@@ -1,6 +1,6 @@
-import clickhouse_connect
 from functools import lru_cache
-from contextlib import contextmanager
+
+import clickhouse_connect
 
 from app.config import get_settings
 

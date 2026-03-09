@@ -2,17 +2,18 @@
 Project service for project management and API key generation.
 """
 import hashlib
-import secrets
 import re
-from typing import Optional, Tuple
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
-from fastapi import HTTPException, status
+import secrets
 import uuid
+from typing import Optional, Tuple
 
-from app.models.database import Project, ApiKey, Organization
-from app.models.project import ProjectCreate, ProjectUpdate, ApiKeyCreate
+from fastapi import HTTPException, status
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.config import get_settings
+from app.models.database import ApiKey, Project
+from app.models.project import ApiKeyCreate, ProjectCreate, ProjectUpdate
 
 settings = get_settings()
 

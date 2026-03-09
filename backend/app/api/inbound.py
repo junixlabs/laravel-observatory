@@ -5,12 +5,13 @@ Data source: logs table (ClickHouse) with is_outbound = false
 """
 import logging
 import math
-from typing import Optional, List
-from fastapi import APIRouter, HTTPException, Depends, Query
+from typing import List, Optional
+
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
-from app.services.clickhouse import get_clickhouse_client
 from app.api.auth import verify_auth
+from app.services.clickhouse import get_clickhouse_client
 
 router = APIRouter()
 logger = logging.getLogger(__name__)

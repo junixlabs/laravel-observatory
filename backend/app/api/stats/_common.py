@@ -4,8 +4,6 @@ import logging
 import math
 from typing import Optional
 
-from app.constants import DEFAULT_PROJECT_ID
-
 logger = logging.getLogger(__name__)
 
 

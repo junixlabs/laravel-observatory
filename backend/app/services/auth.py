@@ -3,11 +3,12 @@ Authentication service for password hashing and JWT token management.
 """
 from datetime import datetime, timedelta
 from typing import Optional
+
 import bcrypt
-from jose import JWTError, jwt
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
 from fastapi import HTTPException, status
+from jose import JWTError, jwt
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.models.database import User

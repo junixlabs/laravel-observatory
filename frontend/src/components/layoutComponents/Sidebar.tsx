@@ -76,7 +76,7 @@ const navGroups: NavGroup[] = [
   },
 ]
 
-const SIDEBAR_STORAGE_KEY = 'sidmonitor-sidebar-collapsed'
+import { SIDEBAR_STORAGE_KEY } from './constants'
 
 export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const location = useLocation()
@@ -190,4 +190,3 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
   )
 }
 
-export { SIDEBAR_STORAGE_KEY }

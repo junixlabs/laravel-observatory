@@ -1,10 +1,11 @@
 """Frontend error logging endpoint - logs to file for debugging"""
-from fastapi import APIRouter
-from pydantic import BaseModel
-from typing import Optional
-from datetime import datetime
 import json
 import os
+from datetime import datetime
+from typing import Optional
+
+from fastapi import APIRouter
+from pydantic import BaseModel
 
 router = APIRouter()
 

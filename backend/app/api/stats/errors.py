@@ -1,20 +1,21 @@
 """Error analysis endpoints."""
 
-from fastapi import APIRouter, Depends, Query
-from typing import Optional, List, Literal
 import logging
+from typing import List, Literal, Optional
 
+from fastapi import APIRouter, Depends, Query
+
+from app.api.auth import verify_auth
+from app.api.stats._common import safe_float
 from app.models.stats import (
     ErrorBreakdown,
     ErrorCategory,
-    StatusCodeBreakdown,
     ErrorEndpoint,
     ErrorEndpointStatus,
     ErrorTimelinePoint,
+    StatusCodeBreakdown,
 )
-from app.api.auth import verify_auth
 from app.services.clickhouse import get_clickhouse_client
-from app.api.stats._common import safe_float, build_stats_where_clause
 
 logger = logging.getLogger(__name__)
 
@@ -136,7 +137,7 @@ async def get_error_breakdown(
             ),
             by_status_code=by_status_code
         )
-    except Exception as e:
+    except Exception:
         logger.exception("Error fetching error breakdown")
         return ErrorBreakdown(
             total_errors=0,
@@ -252,7 +253,7 @@ async def get_error_endpoints(
             ))
 
         return endpoints
-    except Exception as e:
+    except Exception:
         logger.exception("Error fetching error endpoints")
         return []
 
@@ -325,6 +326,6 @@ async def get_error_timeline(
             ))
 
         return timeline
-    except Exception as e:
+    except Exception:
         logger.exception("Error fetching error timeline")
         return []

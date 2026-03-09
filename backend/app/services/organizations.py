@@ -5,12 +5,13 @@ import re
 import uuid
 from datetime import datetime
 from typing import List, Optional
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_
+
 from fastapi import HTTPException, status
+from sqlalchemy import and_, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.database import Organization, OrganizationMember, User
-from app.models.organization import OrganizationCreate, MemberRole
+from app.models.organization import MemberRole, OrganizationCreate
 
 
 def generate_slug(name: str) -> str:

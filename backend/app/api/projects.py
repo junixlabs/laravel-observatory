@@ -1,35 +1,34 @@
 """
 Project API endpoints for project CRUD and API key management.
 """
-from datetime import datetime
-from typing import List
-from fastapi import APIRouter, Depends, HTTPException, status, Path
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, delete
 import uuid
 
+from fastapi import APIRouter, Depends, HTTPException, Path, status
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.api.auth import get_current_user
 from app.database import get_db
+from app.models.database import ApiKey, Organization, OrganizationMember, Project, User
 from app.models.project import (
-    ProjectCreate,
-    ProjectUpdate,
-    ProjectResponse,
-    ProjectListResponse,
     ApiKeyCreate,
-    ApiKeyResponse,
     ApiKeyCreatedResponse,
     ApiKeyListResponse,
+    ApiKeyResponse,
     DsnResponse,
+    ProjectCreate,
+    ProjectListResponse,
+    ProjectResponse,
+    ProjectUpdate,
 )
-from app.models.database import User, Project, ApiKey, Organization, OrganizationMember
 from app.services.projects import (
+    build_dsn,
+    create_api_key,
     create_project,
     get_project_by_slug,
-    update_project,
-    create_api_key,
     revoke_api_key,
-    build_dsn,
+    update_project,
 )
-from app.api.auth import get_current_user
 
 router = APIRouter()
 

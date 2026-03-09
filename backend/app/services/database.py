@@ -2,16 +2,12 @@
 PostgreSQL database connection and session management.
 """
 from typing import AsyncGenerator
-from sqlalchemy.ext.asyncio import (
-    create_async_engine,
-    AsyncSession,
-    async_sessionmaker,
-    AsyncEngine
-)
+
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
+
 from app.config import get_settings
 from app.models.database import Base
-
 
 settings = get_settings()
 

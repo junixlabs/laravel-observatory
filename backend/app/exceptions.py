@@ -1,6 +1,6 @@
 """Custom exception classes and global exception handlers."""
 
-from fastapi import Request, status
+from fastapi import Request
 from fastapi.responses import JSONResponse
 
 

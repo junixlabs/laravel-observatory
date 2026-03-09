@@ -1,12 +1,13 @@
 """
 SQLAlchemy models for multi-tenant PostgreSQL database.
 """
+import uuid
 from datetime import datetime
 from typing import Optional
-from sqlalchemy import String, Boolean, DateTime, ForeignKey, Index, Text, JSON
+
+from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Index, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
-import uuid
 
 
 class Base(DeclarativeBase):

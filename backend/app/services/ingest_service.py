@@ -11,19 +11,18 @@ from urllib.parse import urlparse
 
 from app.constants import (
     DEFAULT_PROJECT_ID,
-    TABLE_LOGS,
-    TABLE_OUTBOUND_LOGS,
-    TABLE_JOB_LOGS,
-    TABLE_SCHEDULED_TASK_LOGS,
+    JOB_LOGS_COLUMNS,
     LOGS_COLUMNS,
     OUTBOUND_LOGS_COLUMNS,
-    JOB_LOGS_COLUMNS,
     SCHEDULED_TASK_LOGS_COLUMNS,
+    TABLE_JOB_LOGS,
+    TABLE_LOGS,
+    TABLE_OUTBOUND_LOGS,
+    TABLE_SCHEDULED_TASK_LOGS,
 )
 from app.models.ingest import InboundLogEntry, OutboundLogEntry
 from app.models.jobs import JobLogEntry, ScheduledTaskLogEntry
 from app.services.clickhouse import get_clickhouse_client
-from app.exceptions import IngestException
 
 logger = logging.getLogger(__name__)
 

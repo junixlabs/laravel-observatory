@@ -1,21 +1,22 @@
 """Dashboard stats endpoints."""
 
-from fastapi import APIRouter, Depends, Query
-from typing import Optional, List, Literal
 import logging
+from typing import List, Literal, Optional
 
+from fastapi import APIRouter, Depends, Query
+
+from app.api.auth import verify_auth
+from app.api.stats._common import safe_float
 from app.models.stats import (
     DashboardStats,
-    TimeSeriesPoint,
     EndpointStats,
-    RequestCounts,
     GlobalDashboardStats,
     ProjectStats,
+    RequestCounts,
     StatTrend,
+    TimeSeriesPoint,
 )
-from app.api.auth import verify_auth
 from app.services.clickhouse import get_clickhouse_client
-from app.api.stats._common import safe_float, build_stats_where_clause
 
 logger = logging.getLogger(__name__)
 
@@ -80,7 +81,7 @@ async def get_dashboard_stats(
         # Build previous period conditions
         if start_date and end_date:
             # Calculate previous period with same duration
-            prev_period_query = f"""
+            prev_period_query = """
                 SELECT
                     toDateTime(%(start_date)s) - (toDateTime(%(end_date)s) - toDateTime(%(start_date)s)) as prev_start,
                     toDateTime(%(start_date)s) as prev_end
@@ -139,7 +140,7 @@ async def get_dashboard_stats(
             avg_response_time_trend=calculate_trend(safe_float(row[2]), safe_float(prev_row[2]), inverse_positive=True),
             requests_per_minute_trend=calculate_trend(safe_float(row[3]), safe_float(prev_row[3])),
         )
-    except Exception as e:
+    except Exception:
         logger.exception("Error fetching dashboard stats")
         return DashboardStats(
             total_requests=0,
@@ -246,7 +247,7 @@ async def get_timeseries_data(
             ))
 
         return data
-    except Exception as e:
+    except Exception:
         logger.exception("Error fetching timeseries data")
         return []
 
@@ -318,7 +319,7 @@ async def get_top_endpoints(
             ))
 
         return endpoints
-    except Exception as e:
+    except Exception:
         logger.exception("Error fetching top endpoints")
         return []
 
@@ -369,7 +370,7 @@ async def get_request_counts(
             inbound=row[1],
             outbound=row[2]
         )
-    except Exception as e:
+    except Exception:
         logger.exception("Error fetching request counts")
         return RequestCounts(
             all=0,
@@ -460,7 +461,7 @@ async def get_global_dashboard_stats(
             projects=projects,
             most_active_projects=most_active
         )
-    except Exception as e:
+    except Exception:
         logger.exception("Error fetching global dashboard stats")
         return GlobalDashboardStats(
             total_projects=0,

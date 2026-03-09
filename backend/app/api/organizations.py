@@ -2,33 +2,32 @@
 Organization API endpoints for managing organizations and memberships.
 """
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.auth import get_current_user
 from app.database import get_db
-from app.models.database import User, Organization
+from app.models.database import User
 from app.models.organization import (
-    OrganizationCreate,
-    OrganizationUpdate,
-    OrganizationResponse,
-    OrganizationListResponse,
-    OrganizationMemberResponse,
     InviteMemberRequest,
     MemberRole,
+    OrganizationCreate,
+    OrganizationListResponse,
+    OrganizationMemberResponse,
+    OrganizationResponse,
+    OrganizationUpdate,
 )
-from app.api.auth import get_current_user
 from app.services.organizations import (
-    get_user_organizations,
+    add_member,
+    check_organization_permission,
     create_organization,
     get_organization_by_slug,
-    check_organization_permission,
     get_organization_members,
-    add_member,
-    update_member_role,
-    remove_member,
     get_user_membership,
+    get_user_organizations,
+    remove_member,
+    update_member_role,
 )
-
 
 router = APIRouter()
 

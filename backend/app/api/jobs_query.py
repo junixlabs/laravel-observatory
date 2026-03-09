@@ -1,23 +1,24 @@
-from fastapi import APIRouter, Depends, Query
-from typing import Optional, List, Literal
-import math
 import logging
+import math
+from typing import List, Optional
 
+from fastapi import APIRouter, Depends, Query
+
+from app.api.auth import verify_auth
 from app.models.jobs import (
+    JobClassStats,
     JobExecution,
     JobHealthStats,
-    JobTimelinePoint,
     JobQueueStats,
-    JobClassStats,
-    RecentFailure,
-    ScheduledTaskExecution,
-    ScheduledTaskHealthStats,
-    ScheduledTaskCommandStats,
-    ScheduledTaskFailure,
+    JobTimelinePoint,
     MissedTask,
+    RecentFailure,
+    ScheduledTaskCommandStats,
+    ScheduledTaskExecution,
+    ScheduledTaskFailure,
+    ScheduledTaskHealthStats,
 )
 from app.models.log import PaginatedResponse
-from app.api.auth import verify_auth
 from app.services.clickhouse import get_clickhouse_client
 
 logger = logging.getLogger(__name__)

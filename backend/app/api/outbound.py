@@ -1,23 +1,26 @@
 import logging
 import math
 import uuid
-from fastapi import APIRouter, HTTPException, Depends, Query, status
-from typing import Optional
-from sqlalchemy.ext.asyncio import AsyncSession
+from typing import List, Optional
 
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+
+from app.api.auth import verify_auth
+from app.api.ingest import verify_api_key_and_get_project
+from app.models.database import Project
 from app.models.outbound import (
-    OutboundLogEntry,
     BatchOutboundIngestRequest,
+    OutboundEndpointStats,
+    OutboundHostStats,
     OutboundIngestResponse,
-    OutboundLogResponse,
     OutboundLogDetail,
+    OutboundLogEntry,
+    OutboundLogResponse,
+    OutboundOverallStats,
     OutboundPaginatedResponse,
+    OutboundServiceStats,
 )
 from app.services.clickhouse import get_clickhouse_client
-from app.api.ingest import verify_api_key_and_get_project
-from app.api.auth import verify_auth
-from app.database import get_db
-from app.models.database import Project
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -520,15 +523,6 @@ def safe_float(value, default: float = 0.0) -> float:
         return f
     except (TypeError, ValueError):
         return default
-
-
-from typing import List
-from app.models.outbound import (
-    OutboundOverallStats,
-    OutboundServiceStats,
-    OutboundHostStats,
-    OutboundEndpointStats,
-)
 
 
 @router.get("/stats/outbound", response_model=OutboundOverallStats)

@@ -1,12 +1,27 @@
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from app.api import (
+    auth,
+    frontend_logs,
+    health,
+    inbound,
+    ingest,
+    jobs,
+    jobs_query,
+    logs,
+    organizations,
+    outbound,
+    projects,
+    stats,
+)
+from app.api import settings as settings_router
 from app.config import get_settings
 from app.database import init_db
-from app.api import logs, stats, health, ingest, settings as settings_router, auth, projects, organizations, jobs, jobs_query, outbound, inbound, frontend_logs
-from app.services.clickhouse import init_database as init_clickhouse
 from app.exceptions import AppException, app_exception_handler
+from app.services.clickhouse import init_database as init_clickhouse
 
 
 @asynccontextmanager

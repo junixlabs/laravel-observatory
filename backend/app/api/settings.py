@@ -1,8 +1,9 @@
 """Settings API endpoints for project configuration."""
 
+from typing import List, Optional
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
-from typing import Optional, List
 
 from app.api.auth import verify_auth
 from app.config import get_settings

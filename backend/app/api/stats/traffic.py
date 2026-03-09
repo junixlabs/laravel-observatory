@@ -1,19 +1,20 @@
 """Traffic pattern analysis endpoints."""
 
-from fastapi import APIRouter, Depends, Query
-from typing import Optional, List, Literal
 import logging
+from typing import List, Literal, Optional
 
+from fastapi import APIRouter, Depends, Query
+
+from app.api.auth import verify_auth
+from app.api.stats._common import safe_float
 from app.models.stats import (
-    TrafficByMethod,
     PeakHourStats,
-    TrafficByDay,
     ThroughputStats,
     ThroughputTimeline,
+    TrafficByDay,
+    TrafficByMethod,
 )
-from app.api.auth import verify_auth
 from app.services.clickhouse import get_clickhouse_client
-from app.api.stats._common import safe_float, build_stats_where_clause
 
 logger = logging.getLogger(__name__)
 
@@ -83,7 +84,7 @@ async def get_traffic_by_method(
             ))
 
         return traffic
-    except Exception as e:
+    except Exception:
         logger.exception("Error fetching traffic by method")
         return []
 
@@ -170,7 +171,7 @@ async def get_peak_hours(
             ))
 
         return peak_hours
-    except Exception as e:
+    except Exception:
         logger.exception("Error fetching peak hours")
         return []
 
@@ -252,7 +253,7 @@ async def get_traffic_by_day(
             ))
 
         return traffic_by_day
-    except Exception as e:
+    except Exception:
         logger.exception("Error fetching traffic by day")
         return []
 
@@ -338,7 +339,7 @@ async def get_throughput(
             avg_requests_per_second=avg_requests_per_second,
             timeline=timeline
         )
-    except Exception as e:
+    except Exception:
         logger.exception("Error fetching throughput")
         return ThroughputStats(
             avg_requests_per_minute=0.0,

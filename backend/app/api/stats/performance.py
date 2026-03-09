@@ -1,20 +1,21 @@
 """Performance metrics endpoints."""
 
-from fastapi import APIRouter, Depends, Query
-from typing import Optional, List, Literal
 import logging
+from typing import List, Literal, Optional
 
+from fastapi import APIRouter, Depends, Query
+
+from app.api.auth import verify_auth
+from app.api.stats._common import safe_float
 from app.models.stats import (
-    ServiceHealth,
     ModuleHealth,
     PerformancePercentiles,
-    SlowRequestsSummary,
-    SlowestEndpoint,
     PerformanceTimelinePoint,
+    ServiceHealth,
+    SlowestEndpoint,
+    SlowRequestsSummary,
 )
-from app.api.auth import verify_auth
 from app.services.clickhouse import get_clickhouse_client
-from app.api.stats._common import safe_float, build_stats_where_clause
 
 logger = logging.getLogger(__name__)
 
@@ -83,7 +84,7 @@ async def get_service_health(
             ))
 
         return services
-    except Exception as e:
+    except Exception:
         logger.exception("Error fetching service health")
         return []
 
@@ -150,7 +151,7 @@ async def get_module_health(
             ))
 
         return modules
-    except Exception as e:
+    except Exception:
         logger.exception("Error fetching module health")
         return []
 
@@ -221,7 +222,7 @@ async def get_performance_percentiles(
             avg=safe_float(row[7]),
             total_requests=row[8] or 0
         )
-    except Exception as e:
+    except Exception:
         logger.exception("Error fetching performance percentiles")
         return PerformancePercentiles(
             p50=0.0,
@@ -317,7 +318,7 @@ async def get_slow_requests(
             slow_percentage=slow_percentage,
             slowest_endpoints=slowest_endpoints
         )
-    except Exception as e:
+    except Exception:
         logger.exception("Error fetching slow requests")
         return SlowRequestsSummary(
             total_requests=0,
@@ -391,6 +392,6 @@ async def get_performance_timeline(
             ))
 
         return timeline
-    except Exception as e:
+    except Exception:
         logger.exception("Error fetching performance timeline")
         return []

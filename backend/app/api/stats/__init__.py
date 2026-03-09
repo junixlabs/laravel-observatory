@@ -3,10 +3,10 @@
 from fastapi import APIRouter
 
 from app.api.stats.dashboard import router as dashboard_router
-from app.api.stats.traffic import router as traffic_router
-from app.api.stats.performance import router as performance_router
-from app.api.stats.users import router as users_router
 from app.api.stats.errors import router as errors_router
+from app.api.stats.performance import router as performance_router
+from app.api.stats.traffic import router as traffic_router
+from app.api.stats.users import router as users_router
 
 router = APIRouter()
 

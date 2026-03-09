@@ -1,15 +1,14 @@
 """SQLite-based API Key Service for managing API keys."""
 
-import sqlite3
-import secrets
 import hashlib
+import secrets
+import sqlite3
 import uuid
+from contextlib import contextmanager
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
-from dataclasses import dataclass
-from contextlib import contextmanager
-
 
 # Database file location (in backend directory)
 DB_PATH = Path(__file__).parent.parent.parent / "data" / "api_keys.db"

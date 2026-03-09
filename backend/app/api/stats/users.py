@@ -1,17 +1,18 @@
 """User analytics endpoints."""
 
-from fastapi import APIRouter, Depends, Query
-from typing import Optional, List, Literal
 import logging
+from typing import List, Literal, Optional
 
+from fastapi import APIRouter, Depends, Query
+
+from app.api.auth import verify_auth
+from app.api.stats._common import safe_float
 from app.models.stats import (
-    UserStats,
     UserActivityPoint,
+    UserStats,
     UserWithErrors,
 )
-from app.api.auth import verify_auth
 from app.services.clickhouse import get_clickhouse_client
-from app.api.stats._common import safe_float, build_stats_where_clause
 
 logger = logging.getLogger(__name__)
 
@@ -89,7 +90,7 @@ async def get_top_users(
             ))
 
         return users
-    except Exception as e:
+    except Exception:
         logger.exception("Error fetching top users")
         return []
 
@@ -155,7 +156,7 @@ async def get_user_activity(
             ))
 
         return activity
-    except Exception as e:
+    except Exception:
         logger.exception("Error fetching user activity")
         return []
 
@@ -225,6 +226,6 @@ async def get_users_with_errors(
             ))
 
         return users
-    except Exception as e:
+    except Exception:
         logger.exception("Error fetching users with errors")
         return []
