@@ -15,13 +15,9 @@ class PrometheusExporter implements ExporterInterface
 {
     protected Application $app;
 
-    protected ?CollectorRegistry $registry = null;
+    protected CollectorRegistry $registry;
 
-    protected ?string $namespace = null;
-
-    protected bool $enabled;
-
-    protected bool $initialized = false;
+    protected string $namespace;
 
     // Cached metrics
     protected array $counters = [];
@@ -33,29 +29,10 @@ class PrometheusExporter implements ExporterInterface
     public function __construct(Application $app)
     {
         $this->app = $app;
-        // Only check if enabled, don't initialize storage yet (lazy loading)
-        $this->enabled = config('observatory.prometheus.enabled', false);
-    }
-
-    /**
-     * Lazy initialization - only connect when actually needed
-     */
-    protected function ensureInitialized(): bool
-    {
-        if (! $this->enabled) {
-            return false;
-        }
-
-        if ($this->initialized) {
-            return true;
-        }
-
         $this->namespace = $this->sanitizeNamespace(config('observatory.app_name', 'laravel'));
         $this->registry = new CollectorRegistry($this->createStorage());
-        $this->registerDefaultMetrics();
-        $this->initialized = true;
 
-        return true;
+        $this->registerDefaultMetrics();
     }
 
     protected function createStorage()
@@ -74,20 +51,12 @@ class PrometheusExporter implements ExporterInterface
     {
         $config = config('observatory.prometheus.redis', []);
 
-        $redisConfig = [
+        return [
             'host' => $config['host'] ?? '127.0.0.1',
             'port' => $config['port'] ?? 6379,
+            'password' => $config['password'] ?? null,
             'database' => $config['database'] ?? 0,
         ];
-
-        // Only include password if explicitly set (non-empty)
-        // Prometheus Redis library will try to AUTH if password key exists
-        $password = $config['password'] ?? null;
-        if (! empty($password)) {
-            $redisConfig['password'] = $password;
-        }
-
-        return $redisConfig;
     }
 
     protected function registerDefaultMetrics(): void
@@ -153,10 +122,6 @@ class PrometheusExporter implements ExporterInterface
 
     public function recordInbound(array $data): void
     {
-        if (! $this->ensureInitialized()) {
-            return;
-        }
-
         $labels = [
             $data['method'],
             $this->sanitizeLabel($data['route'] ?? 'unknown'),
@@ -169,10 +134,6 @@ class PrometheusExporter implements ExporterInterface
 
     public function recordOutbound(array $data): void
     {
-        if (! $this->ensureInitialized()) {
-            return;
-        }
-
         $labels = [
             $data['method'],
             $this->sanitizeLabel($data['host'] ?? 'unknown'),
@@ -185,10 +146,6 @@ class PrometheusExporter implements ExporterInterface
 
     public function recordJob(array $data): void
     {
-        if (! $this->ensureInitialized()) {
-            return;
-        }
-
         $labels = [
             $this->sanitizeLabel($data['job_name'] ?? 'unknown'),
             $this->sanitizeLabel($data['queue'] ?? 'default'),
@@ -201,10 +158,6 @@ class PrometheusExporter implements ExporterInterface
 
     public function recordException(\Throwable $exception, array $context = []): void
     {
-        if (! $this->ensureInitialized()) {
-            return;
-        }
-
         $labels = [
             $this->sanitizeLabel(get_class($exception)),
             $this->sanitizeLabel(basename($exception->getFile())),
@@ -215,10 +168,6 @@ class PrometheusExporter implements ExporterInterface
 
     public function incrementCounter(string $name, array $labels = [], float $value = 1): void
     {
-        if (! $this->ensureInitialized()) {
-            return;
-        }
-
         $sanitizedName = $this->sanitizeName($name);
 
         if (! isset($this->counters[$sanitizedName])) {
@@ -237,10 +186,6 @@ class PrometheusExporter implements ExporterInterface
 
     public function setGauge(string $name, float $value, array $labels = []): void
     {
-        if (! $this->ensureInitialized()) {
-            return;
-        }
-
         $sanitizedName = $this->sanitizeName($name);
 
         if (! isset($this->gauges[$sanitizedName])) {
@@ -259,10 +204,6 @@ class PrometheusExporter implements ExporterInterface
 
     public function observeHistogram(string $name, float $value, array $labels = []): void
     {
-        if (! $this->ensureInitialized()) {
-            return;
-        }
-
         $sanitizedName = $this->sanitizeName($name);
         $buckets = config('observatory.prometheus.buckets', [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10]);
 
@@ -283,10 +224,6 @@ class PrometheusExporter implements ExporterInterface
 
     public function getOutput(): string
     {
-        if (! $this->ensureInitialized()) {
-            return '';
-        }
-
         $renderer = new RenderTextFormat;
 
         return $renderer->render($this->registry->getMetricFamilySamples());
@@ -298,10 +235,8 @@ class PrometheusExporter implements ExporterInterface
         // and scraped by Prometheus. Nothing to flush.
     }
 
-    public function getRegistry(): ?CollectorRegistry
+    public function getRegistry(): CollectorRegistry
     {
-        $this->ensureInitialized();
-
         return $this->registry;
     }
 

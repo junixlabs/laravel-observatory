@@ -4,29 +4,22 @@ namespace JunixLabs\Observatory\Collectors;
 
 use Illuminate\Contracts\Queue\Job;
 use JunixLabs\Observatory\Contracts\ExporterInterface;
-use JunixLabs\Observatory\Loggers\JobLogger;
 
 class JobCollector
 {
     protected ExporterInterface $exporter;
 
-    protected JobLogger $logger;
-
     protected array $jobStartTimes = [];
 
-    public function __construct(ExporterInterface $exporter, JobLogger $logger)
+    public function __construct(ExporterInterface $exporter)
     {
         $this->exporter = $exporter;
-        $this->logger = $logger;
     }
 
     public function start(Job $job): void
     {
         $jobId = $this->getJobId($job);
         $this->jobStartTimes[$jobId] = microtime(true);
-
-        // Start logger tracking
-        $this->logger->start($job);
     }
 
     public function end(Job $job, string $status, ?\Throwable $exception = null): void
@@ -68,11 +61,7 @@ class JobCollector
         // Add custom labels
         $data['labels'] = config('observatory.labels', []);
 
-        // Record metrics
         $this->exporter->recordJob($data);
-
-        // Log to channel
-        $this->logger->log($job, $status, $exception);
 
         // Also record exception if present
         if ($exception !== null && config('observatory.exceptions.enabled', true)) {
