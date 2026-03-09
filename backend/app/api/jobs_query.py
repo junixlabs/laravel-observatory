@@ -1,0 +1,658 @@
+from fastapi import APIRouter, Depends, Query
+from typing import Optional, List, Literal
+import math
+import logging
+
+from app.models.jobs import (
+    JobExecution,
+    JobHealthStats,
+    JobTimelinePoint,
+    JobQueueStats,
+    JobClassStats,
+    RecentFailure,
+    ScheduledTaskExecution,
+    ScheduledTaskHealthStats,
+    ScheduledTaskCommandStats,
+    ScheduledTaskFailure,
+    MissedTask,
+)
+from app.models.log import PaginatedResponse
+from app.api.auth import verify_auth
+from app.services.clickhouse import get_clickhouse_client
+
+logger = logging.getLogger(__name__)
+
+router = APIRouter()
+
+
+def parse_timeframe(timeframe: str) -> str:
+    """Parse timeframe string to ClickHouse INTERVAL."""
+    mapping = {
+        "1h": "INTERVAL 1 HOUR",
+        "24h": "INTERVAL 24 HOUR",
+        "7d": "INTERVAL 7 DAY",
+        "30d": "INTERVAL 30 DAY",
+    }
+    return mapping.get(timeframe, "INTERVAL 24 HOUR")
+
+
+@router.get("/jobs", response_model=PaginatedResponse)
+async def get_jobs(
+    project_id: str = Query(..., description="Filter by project ID (UUID)"),
+    queue_name: Optional[str] = Query(None, description="Filter by queue name"),
+    job_class: Optional[str] = Query(None, description="Filter by job class"),
+    status: Optional[str] = Query(None, description="Filter by status: started, completed, failed, retrying"),
+    from_date: Optional[str] = Query(None, description="Start date filter"),
+    to_date: Optional[str] = Query(None, description="End date filter"),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=100),
+    _: bool = Depends(verify_auth),
+):
+    """Get paginated job executions with optional filters."""
+    try:
+        client = get_clickhouse_client()
+
+        # Build WHERE conditions
+        conditions = ["toString(project_id) = %(project_id)s"]
+        params = {"project_id": project_id}
+
+        if queue_name:
+            conditions.append("queue_name = %(queue_name)s")
+            params["queue_name"] = queue_name
+
+        if job_class:
+            conditions.append("job_class = %(job_class)s")
+            params["job_class"] = job_class
+
+        if status:
+            conditions.append("status = %(status)s")
+            params["status"] = status
+
+        if from_date:
+            conditions.append("started_at >= %(from_date)s")
+            params["from_date"] = from_date
+
+        if to_date:
+            conditions.append("started_at <= %(to_date)s")
+            params["to_date"] = to_date
+
+        where_clause = " AND ".join(conditions)
+        offset = (page - 1) * page_size
+
+        # Get total count
+        count_query = f"SELECT count(*) FROM job_logs WHERE {where_clause}"
+        count_result = client.query(count_query, parameters=params)
+        total = count_result.result_rows[0][0] if count_result.result_rows else 0
+        total_pages = math.ceil(total / page_size) if total > 0 else 0
+
+        # Get paginated data
+        params["page_size"] = page_size
+        params["offset"] = offset
+
+        data_query = """
+            SELECT
+                job_id,
+                job_uuid,
+                toString(project_id) as project_id,
+                formatDateTime(started_at, '%%Y-%%m-%%d %%H:%%i:%%S') as timestamp_str,
+                job_class,
+                job_name,
+                queue_name,
+                connection,
+                status,
+                formatDateTime(started_at, '%%Y-%%m-%%d %%H:%%i:%%S') as started_at_str,
+                if(completed_at IS NULL, NULL, formatDateTime(completed_at, '%%Y-%%m-%%d %%H:%%i:%%S')) as completed_at_str,
+                duration_ms,
+                payload,
+                attempt_number,
+                max_attempts,
+                exception_class,
+                exception_message,
+                exception_trace,
+                user_id,
+                memory_usage_mb
+            FROM job_logs
+            WHERE """ + where_clause + """
+            ORDER BY started_at DESC
+            LIMIT %(page_size)s OFFSET %(offset)s
+        """
+
+        result = client.query(data_query, parameters=params)
+
+        jobs = []
+        for row in result.result_rows:
+            jobs.append(JobExecution(
+                job_id=row[0],
+                job_uuid=row[1],
+                project_id=row[2],
+                timestamp=row[3],
+                job_class=row[4],
+                job_name=row[5],
+                queue_name=row[6],
+                connection=row[7],
+                status=row[8],
+                started_at=row[9],
+                completed_at=row[10],
+                duration_ms=row[11],
+                payload=row[12],
+                attempt_number=row[13],
+                max_attempts=row[14],
+                exception_class=row[15],
+                exception_message=row[16],
+                exception_trace=row[17],
+                user_id=row[18],
+                memory_usage_mb=row[19],
+            ))
+
+        return PaginatedResponse(
+            data=jobs,
+            total=total,
+            page=page,
+            page_size=page_size,
+            total_pages=total_pages,
+        )
+    except Exception as e:
+        logger.error(f"Error fetching jobs: {e}")
+        return PaginatedResponse(
+            data=[],
+            total=0,
+            page=page,
+            page_size=page_size,
+            total_pages=0,
+        )
+
+
+@router.get("/jobs/stats", response_model=JobHealthStats)
+async def get_job_stats(
+    project_id: str = Query(..., description="Filter by project ID (UUID)"),
+    queue_name: Optional[str] = Query(None, description="Filter by queue name"),
+    timeframe: str = Query("24h", description="Timeframe: 1h, 24h, 7d, 30d"),
+    _: bool = Depends(verify_auth),
+):
+    """Get job health statistics."""
+    try:
+        client = get_clickhouse_client()
+        interval = parse_timeframe(timeframe)
+
+        # Build WHERE conditions
+        conditions = [
+            "toString(project_id) = %(project_id)s",
+            f"started_at >= now() - {interval}"
+        ]
+        params = {"project_id": project_id}
+
+        if queue_name:
+            conditions.append("queue_name = %(queue_name)s")
+            params["queue_name"] = queue_name
+
+        where_clause = " AND ".join(conditions)
+
+        # Overall stats with P50, P95, P99 and additional status counts
+        overall_query = f"""
+            SELECT
+                count(*) as total_executions,
+                countIf(status IN ('completed', 'success')) as success_count,
+                countIf(status = 'failed') as failure_count,
+                countIf(status = 'retrying') as retrying_count,
+                countIf(status = 'pending') as pending_count,
+                countIf(status = 'cancelled') as cancelled_count,
+                countIf(status = 'timeout') as timeout_count,
+                round(
+                    if(
+                        countIf(status IN ('completed', 'success', 'failed')) > 0,
+                        countIf(status IN ('completed', 'success')) * 100.0 / countIf(status IN ('completed', 'success', 'failed')),
+                        0
+                    ),
+                    2
+                ) as success_rate,
+                round(avg(duration_ms), 2) as avg_duration_ms,
+                round(quantile(0.50)(duration_ms), 2) as p50_duration_ms,
+                round(quantile(0.95)(duration_ms), 2) as p95_duration_ms,
+                round(quantile(0.99)(duration_ms), 2) as p99_duration_ms
+            FROM job_logs
+            WHERE {where_clause}
+        """
+
+        result = client.query(overall_query, parameters=params)
+        row = result.result_rows[0] if result.result_rows else (0, 0, 0, 0, 0, 0, 0, 0.0, 0.0, 0.0, 0.0, 0.0)
+
+        # Stats by queue
+        queue_query = f"""
+            SELECT
+                queue_name,
+                count(*) as total_executions,
+                countIf(status = 'completed') as success_count,
+                countIf(status = 'failed') as failure_count,
+                round(avg(duration_ms), 2) as avg_duration_ms
+            FROM job_logs
+            WHERE {where_clause}
+            GROUP BY queue_name
+            ORDER BY total_executions DESC
+        """
+
+        queue_result = client.query(queue_query, parameters=params)
+        by_queue = [
+            JobQueueStats(
+                queue_name=r[0],
+                total_executions=r[1],
+                success_count=r[2],
+                failure_count=r[3],
+                avg_duration_ms=float(r[4]) if r[4] else 0.0,
+            )
+            for r in queue_result.result_rows
+        ]
+
+        # Stats by job class
+        class_query = f"""
+            SELECT
+                job_class,
+                count(*) as total_executions,
+                countIf(status = 'completed') as success_count,
+                countIf(status = 'failed') as failure_count,
+                round(avg(duration_ms), 2) as avg_duration_ms
+            FROM job_logs
+            WHERE {where_clause}
+            GROUP BY job_class
+            ORDER BY total_executions DESC
+            LIMIT 10
+        """
+
+        class_result = client.query(class_query, parameters=params)
+        by_job_class = [
+            JobClassStats(
+                job_class=r[0],
+                total_executions=r[1],
+                success_count=r[2],
+                failure_count=r[3],
+                avg_duration_ms=float(r[4]) if r[4] else 0.0,
+            )
+            for r in class_result.result_rows
+        ]
+
+        # Recent failures
+        failures_query = """
+            SELECT
+                job_id,
+                job_class,
+                formatDateTime(started_at, '%%Y-%%m-%%d %%H:%%i:%%S') as timestamp_str,
+                exception_message
+            FROM job_logs
+            WHERE """ + where_clause + """ AND status = 'failed'
+            ORDER BY started_at DESC
+            LIMIT 5
+        """
+
+        failures_result = client.query(failures_query, parameters=params)
+        recent_failures = [
+            RecentFailure(
+                job_id=r[0],
+                job_class=r[1],
+                timestamp=r[2],
+                exception_message=r[3],
+            )
+            for r in failures_result.result_rows
+        ]
+
+        return JobHealthStats(
+            total_executions=row[0],
+            success_count=row[1],
+            failure_count=row[2],
+            retrying_count=row[3],
+            pending_count=row[4],
+            cancelled_count=row[5],
+            timeout_count=row[6],
+            success_rate=float(row[7]) if row[7] else 0.0,
+            avg_duration_ms=float(row[8]) if row[8] else 0.0,
+            p50_duration_ms=float(row[9]) if row[9] else 0.0,
+            p95_duration_ms=float(row[10]) if row[10] else 0.0,
+            p99_duration_ms=float(row[11]) if row[11] else 0.0,
+            by_queue=by_queue,
+            by_job_class=by_job_class,
+            recent_failures=recent_failures,
+        )
+    except Exception as e:
+        logger.error(f"Error fetching job stats: {e}")
+        return JobHealthStats(
+            total_executions=0,
+            success_count=0,
+            failure_count=0,
+            retrying_count=0,
+            pending_count=0,
+            cancelled_count=0,
+            timeout_count=0,
+            success_rate=0.0,
+            avg_duration_ms=0.0,
+            p50_duration_ms=0.0,
+            p95_duration_ms=0.0,
+            p99_duration_ms=0.0,
+            by_queue=[],
+            by_job_class=[],
+            recent_failures=[],
+        )
+
+
+@router.get("/jobs/timeline", response_model=List[JobTimelinePoint])
+async def get_job_timeline(
+    project_id: str = Query(..., description="Filter by project ID (UUID)"),
+    timeframe: str = Query("24h", description="Timeframe: 1h, 24h, 7d, 30d"),
+    interval: str = Query("hour", description="Interval: hour, day"),
+    _: bool = Depends(verify_auth),
+):
+    """Get time-series data for job executions."""
+    try:
+        client = get_clickhouse_client()
+        timeframe_interval = parse_timeframe(timeframe)
+
+        # Map interval to ClickHouse function
+        interval_map = {
+            "hour": "toStartOfHour",
+            "day": "toStartOfDay",
+        }
+        time_func = interval_map.get(interval, "toStartOfHour")
+
+        params = {"project_id": project_id}
+
+        query = f"""
+            SELECT
+                {time_func}(started_at) as time_bucket,
+                count(*) as total,
+                countIf(status IN ('completed', 'success')) as success,
+                countIf(status = 'failed') as failed,
+                countIf(status = 'retrying') as retrying,
+                countIf(status = 'pending') as pending,
+                countIf(status = 'cancelled') as cancelled,
+                countIf(status = 'timeout') as timeout
+            FROM job_logs
+            WHERE toString(project_id) = %(project_id)s
+                AND started_at >= now() - {timeframe_interval}
+            GROUP BY time_bucket
+            ORDER BY time_bucket ASC
+        """
+
+        result = client.query(query, parameters=params)
+
+        timeline = [
+            JobTimelinePoint(
+                timestamp=row[0].isoformat() if hasattr(row[0], 'isoformat') else str(row[0]),
+                total=row[1],
+                success=row[2],
+                failed=row[3],
+                retrying=row[4],
+                pending=row[5],
+                cancelled=row[6],
+                timeout=row[7],
+            )
+            for row in result.result_rows
+        ]
+
+        return timeline
+    except Exception as e:
+        logger.error(f"Error fetching job timeline: {e}")
+        return []
+
+
+@router.get("/scheduled-tasks", response_model=PaginatedResponse)
+async def get_scheduled_tasks(
+    project_id: str = Query(..., description="Filter by project ID (UUID)"),
+    command: Optional[str] = Query(None, description="Filter by command"),
+    status: Optional[str] = Query(None, description="Filter by status"),
+    from_date: Optional[str] = Query(None, description="Start date filter"),
+    to_date: Optional[str] = Query(None, description="End date filter"),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=100),
+    _: bool = Depends(verify_auth),
+):
+    """Get paginated scheduled task executions with optional filters."""
+    try:
+        client = get_clickhouse_client()
+
+        # Build WHERE conditions
+        conditions = ["toString(project_id) = %(project_id)s"]
+        params = {"project_id": project_id}
+
+        if command:
+            conditions.append("command = %(command)s")
+            params["command"] = command
+
+        if status:
+            conditions.append("status = %(status)s")
+            params["status"] = status
+
+        if from_date:
+            conditions.append("scheduled_at >= %(from_date)s")
+            params["from_date"] = from_date
+
+        if to_date:
+            conditions.append("scheduled_at <= %(to_date)s")
+            params["to_date"] = to_date
+
+        where_clause = " AND ".join(conditions)
+        offset = (page - 1) * page_size
+
+        # Get total count
+        count_query = f"SELECT count(*) FROM scheduled_task_logs WHERE {where_clause}"
+        count_result = client.query(count_query, parameters=params)
+        total = count_result.result_rows[0][0] if count_result.result_rows else 0
+        total_pages = math.ceil(total / page_size) if total > 0 else 0
+
+        # Get paginated data
+        params["page_size"] = page_size
+        params["offset"] = offset
+
+        data_query = """
+            SELECT
+                task_id,
+                toString(project_id) as project_id,
+                formatDateTime(scheduled_at, '%%Y-%%m-%%d %%H:%%i:%%S') as timestamp_str,
+                command,
+                description,
+                expression,
+                timezone,
+                status,
+                formatDateTime(scheduled_at, '%%Y-%%m-%%d %%H:%%i:%%S') as scheduled_at_str,
+                if(started_at IS NULL, NULL, formatDateTime(started_at, '%%Y-%%m-%%d %%H:%%i:%%S')) as started_at_str,
+                if(completed_at IS NULL, NULL, formatDateTime(completed_at, '%%Y-%%m-%%d %%H:%%i:%%S')) as completed_at_str,
+                duration_ms,
+                exit_code,
+                output,
+                error_message,
+                error_trace,
+                without_overlapping,
+                mutex_name,
+                formatDateTime(expected_run_time, '%%Y-%%m-%%d %%H:%%i:%%S') as expected_run_time_str,
+                delay_ms
+            FROM scheduled_task_logs
+            WHERE """ + where_clause + """
+            ORDER BY scheduled_at DESC
+            LIMIT %(page_size)s OFFSET %(offset)s
+        """
+
+        result = client.query(data_query, parameters=params)
+
+        tasks = []
+        for row in result.result_rows:
+            tasks.append(ScheduledTaskExecution(
+                task_id=row[0],
+                project_id=row[1],
+                timestamp=row[2],
+                command=row[3],
+                description=row[4],
+                expression=row[5],
+                timezone=row[6],
+                status=row[7],
+                scheduled_at=row[8],
+                started_at=row[9],
+                completed_at=row[10],
+                duration_ms=row[11],
+                exit_code=row[12],
+                output=row[13],
+                error_message=row[14],
+                error_trace=row[15],
+                without_overlapping=bool(row[16]),
+                mutex_name=row[17],
+                expected_run_time=row[18],
+                delay_ms=row[19],
+            ))
+
+        return PaginatedResponse(
+            data=tasks,
+            total=total,
+            page=page,
+            page_size=page_size,
+            total_pages=total_pages,
+        )
+    except Exception as e:
+        logger.error(f"Error fetching scheduled tasks: {e}")
+        return PaginatedResponse(
+            data=[],
+            total=0,
+            page=page,
+            page_size=page_size,
+            total_pages=0,
+        )
+
+
+@router.get("/scheduled-tasks/stats", response_model=ScheduledTaskHealthStats)
+async def get_scheduled_task_stats(
+    project_id: str = Query(..., description="Filter by project ID (UUID)"),
+    timeframe: str = Query("7d", description="Timeframe: 1h, 24h, 7d, 30d"),
+    _: bool = Depends(verify_auth),
+):
+    """Get scheduled task health statistics."""
+    try:
+        client = get_clickhouse_client()
+        interval = parse_timeframe(timeframe)
+
+        conditions = [
+            "toString(project_id) = %(project_id)s",
+            f"scheduled_at >= now() - {interval}"
+        ]
+        params = {"project_id": project_id}
+        where_clause = " AND ".join(conditions)
+
+        # Overall stats
+        overall_query = f"""
+            SELECT
+                count(*) as total_executions,
+                countIf(status = 'completed') as success_count,
+                countIf(status = 'failed') as failure_count,
+                countIf(status = 'missed') as missed_count,
+                round(
+                    if(
+                        countIf(status IN ('completed', 'failed')) > 0,
+                        countIf(status = 'completed') * 100.0 / countIf(status IN ('completed', 'failed')),
+                        0
+                    ),
+                    2
+                ) as success_rate,
+                round(avg(delay_ms), 2) as avg_delay_ms,
+                round(avg(duration_ms), 2) as avg_duration_ms
+            FROM scheduled_task_logs
+            WHERE {where_clause}
+        """
+
+        result = client.query(overall_query, parameters=params)
+        row = result.result_rows[0] if result.result_rows else (0, 0, 0, 0, 0.0, 0.0, 0.0)
+
+        # Stats by command
+        command_query = f"""
+            SELECT
+                command,
+                count(*) as total_executions,
+                countIf(status = 'completed') as success_count,
+                countIf(status = 'failed') as failure_count,
+                countIf(status = 'missed') as missed_count,
+                round(avg(delay_ms), 2) as avg_delay_ms
+            FROM scheduled_task_logs
+            WHERE {where_clause}
+            GROUP BY command
+            ORDER BY total_executions DESC
+        """
+
+        command_result = client.query(command_query, parameters=params)
+        by_command = [
+            ScheduledTaskCommandStats(
+                command=r[0],
+                total_executions=r[1],
+                success_count=r[2],
+                failure_count=r[3],
+                missed_count=r[4],
+                avg_delay_ms=float(r[5]) if r[5] else 0.0,
+            )
+            for r in command_result.result_rows
+        ]
+
+        # Recent failures
+        failures_query = """
+            SELECT
+                task_id,
+                command,
+                formatDateTime(scheduled_at, '%%Y-%%m-%%d %%H:%%i:%%S') as timestamp_str,
+                error_message
+            FROM scheduled_task_logs
+            WHERE """ + where_clause + """ AND status = 'failed'
+            ORDER BY scheduled_at DESC
+            LIMIT 5
+        """
+
+        failures_result = client.query(failures_query, parameters=params)
+        recent_failures = [
+            ScheduledTaskFailure(
+                task_id=r[0],
+                command=r[1],
+                timestamp=r[2],
+                error_message=r[3],
+            )
+            for r in failures_result.result_rows
+        ]
+
+        # Missed tasks
+        missed_query = """
+            SELECT
+                task_id,
+                command,
+                formatDateTime(scheduled_at, '%%Y-%%m-%%d %%H:%%i:%%S') as scheduled_at_str,
+                delay_ms
+            FROM scheduled_task_logs
+            WHERE """ + where_clause + """ AND status = 'missed'
+            ORDER BY scheduled_at DESC
+            LIMIT 10
+        """
+
+        missed_result = client.query(missed_query, parameters=params)
+        missed_tasks = [
+            MissedTask(
+                task_id=r[0],
+                command=r[1],
+                scheduled_at=r[2],
+                delay_ms=r[3] if r[3] else 0,
+            )
+            for r in missed_result.result_rows
+        ]
+
+        return ScheduledTaskHealthStats(
+            total_executions=row[0],
+            success_count=row[1],
+            failure_count=row[2],
+            missed_count=row[3],
+            success_rate=float(row[4]) if row[4] else 0.0,
+            avg_delay_ms=float(row[5]) if row[5] else 0.0,
+            avg_duration_ms=float(row[6]) if row[6] else 0.0,
+            by_command=by_command,
+            recent_failures=recent_failures,
+            missed_tasks=missed_tasks,
+        )
+    except Exception as e:
+        logger.error(f"Error fetching scheduled task stats: {e}")
+        return ScheduledTaskHealthStats(
+            total_executions=0,
+            success_count=0,
+            failure_count=0,
+            missed_count=0,
+            success_rate=0.0,
+            avg_delay_ms=0.0,
+            avg_duration_ms=0.0,
+            by_command=[],
+            recent_failures=[],
+            missed_tasks=[],
+        )
