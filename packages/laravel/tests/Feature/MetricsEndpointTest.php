@@ -2,6 +2,8 @@
 
 namespace JunixLabs\Observatory\Tests\Feature;
 
+use JunixLabs\Observatory\Contracts\ExporterInterface;
+use JunixLabs\Observatory\Exporters\PrometheusExporter;
 use JunixLabs\Observatory\Tests\TestCase;
 
 class MetricsEndpointTest extends TestCase
@@ -22,6 +24,18 @@ class MetricsEndpointTest extends TestCase
 
     public function test_metrics_endpoint_contains_prometheus_format(): void
     {
+        // Enable Prometheus for this test
+        config([
+            'observatory.prometheus.enabled' => true,
+            'observatory.prometheus.storage' => 'memory',
+        ]);
+
+        // Rebind the exporter with new config
+        $this->app->forgetInstance(ExporterInterface::class);
+        $this->app->singleton(ExporterInterface::class, function ($app) {
+            return new PrometheusExporter($app);
+        });
+
         $response = $this->get('/metrics');
 
         $content = $response->getContent();

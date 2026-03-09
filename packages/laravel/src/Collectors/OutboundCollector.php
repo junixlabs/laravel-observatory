@@ -5,6 +5,7 @@ namespace JunixLabs\Observatory\Collectors;
 use Closure;
 use GuzzleHttp\Promise\PromiseInterface;
 use JunixLabs\Observatory\Contracts\ExporterInterface;
+use JunixLabs\Observatory\Loggers\OutboundRequestLogger;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 
@@ -12,9 +13,12 @@ class OutboundCollector
 {
     protected ExporterInterface $exporter;
 
-    public function __construct(ExporterInterface $exporter)
+    protected OutboundRequestLogger $logger;
+
+    public function __construct(ExporterInterface $exporter, OutboundRequestLogger $logger)
     {
         $this->exporter = $exporter;
+        $this->logger = $logger;
     }
 
     /**
@@ -28,12 +32,26 @@ class OutboundCollector
 
                 return $handler($request, $options)->then(
                     function (ResponseInterface $response) use ($request, $startTime) {
+                        $duration = microtime(true) - $startTime;
+
+                        // Record metrics
                         $this->record($request, $response, $startTime);
+
+                        // Log to channel
+                        $this->logger->log($request, $response, $duration);
 
                         return $response;
                     },
                     function ($reason) use ($request, $startTime) {
+                        $duration = microtime(true) - $startTime;
+
+                        // Record metrics
                         $this->recordError($request, $reason, $startTime);
+
+                        // Log to channel
+                        $error = $reason instanceof \Throwable ? $reason : null;
+                        $this->logger->log($request, null, $duration, $error);
+
                         throw $reason;
                     }
                 );
@@ -61,9 +79,11 @@ class OutboundCollector
             $maxSize = config('observatory.outbound.max_body_size', 64000);
 
             $requestBody = (string) $request->getBody();
+            $request->getBody()->rewind();
             $data['request_body'] = strlen($requestBody) > $maxSize ? substr($requestBody, 0, $maxSize) : $requestBody;
 
             $responseBody = (string) $response->getBody();
+            $response->getBody()->rewind();
             $data['response_body'] = strlen($responseBody) > $maxSize ? substr($responseBody, 0, $maxSize) : $responseBody;
         }
 
