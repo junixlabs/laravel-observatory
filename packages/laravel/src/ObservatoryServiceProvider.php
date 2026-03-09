@@ -97,8 +97,10 @@ class ObservatoryServiceProvider extends ServiceProvider
             return Http::withMiddleware($collector->getGuzzleMiddleware());
         });
 
-        // Auto-observe all HTTP requests
-        Http::globalMiddleware($collector->getGuzzleMiddleware());
+        // Auto-observe all HTTP requests (Laravel 10.15+)
+        if (method_exists(Http::getFacadeRoot(), 'globalMiddleware')) {
+            Http::globalMiddleware($collector->getGuzzleMiddleware());
+        }
     }
 
     protected function registerJobListeners(): void
