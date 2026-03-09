@@ -113,7 +113,7 @@ def _build_job_row(entry: JobLogEntry, project_id: str) -> list:
         entry.status,
         entry.started_at,
         entry.completed_at,
-        entry.duration_ms,
+        int(entry.duration_ms or 0),
         entry.payload or '{}',
         entry.attempt_number,
         entry.max_attempts,
@@ -121,7 +121,7 @@ def _build_job_row(entry: JobLogEntry, project_id: str) -> list:
         entry.exception_message or '',
         entry.exception_trace or '',
         entry.user_id or '',
-        entry.memory_usage_mb,
+        float(entry.memory_usage_mb or 0),
         str(entry.metadata) if entry.metadata else '{}',
     ]
 
