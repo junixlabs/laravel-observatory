@@ -1,59 +1,71 @@
-.PHONY: help dev dev-backend dev-frontend docker-up docker-down clean
+.PHONY: help up down dev dev-db dev-backend dev-frontend logs clean install build
 
-help:
-	@echo "Sid Monitoring - Development Commands"
+help: ## Show this help
+	@echo "SidMonitor - Commands"
 	@echo ""
-	@echo "Usage:"
-	@echo "  make dev            - Start all development services"
-	@echo "  make dev-backend    - Start backend only (requires ClickHouse)"
-	@echo "  make dev-frontend   - Start frontend only"
-	@echo "  make docker-up      - Start Docker Compose stack"
-	@echo "  make docker-down    - Stop Docker Compose stack"
-	@echo "  make clickhouse     - Start ClickHouse for local development"
-	@echo "  make clean          - Clean build artifacts"
+	@echo "Docker (full stack):"
+	@echo "  make up              Start all services (postgres, clickhouse, backend, frontend)"
+	@echo "  make down            Stop all services"
+	@echo "  make logs            Show service logs"
+	@echo ""
+	@echo "Local development:"
+	@echo "  make dev-db          Start databases only (postgres + clickhouse)"
+	@echo "  make dev-backend     Start backend (port 8030)"
+	@echo "  make dev-frontend    Start frontend (port 3030)"
+	@echo "  make dev             Start databases + instructions"
+	@echo ""
+	@echo "Utilities:"
+	@echo "  make install         Install all dependencies"
+	@echo "  make build           Build frontend for production"
+	@echo "  make clean           Remove build artifacts"
 
-# Start ClickHouse for local development
-clickhouse:
-	docker-compose -f docker-compose.dev.yml up -d
+# ---- Docker (full stack) ----
 
-# Start backend development server
-dev-backend:
-	cd backend && python run.py
+up: ## Start full stack with Docker
+	docker compose up -d --build
+	@echo ""
+	@echo "SidMonitor is running:"
+	@echo "  Frontend: http://localhost:$${FRONTEND_PORT:-3000}"
+	@echo "  Backend:  http://localhost:$${BACKEND_PORT:-8000}"
+	@echo "  API Docs: http://localhost:$${BACKEND_PORT:-8000}/docs"
 
-# Start frontend development server
-dev-frontend:
+down: ## Stop all Docker services
+	docker compose down
+
+logs: ## Show Docker logs
+	docker compose logs -f
+
+# ---- Local development ----
+
+dev-db: ## Start databases only (for local dev)
+	docker compose -f docker-compose.dev.yml up -d
+	@echo "Waiting for services..."
+	@sleep 3
+	@echo "PostgreSQL: localhost:5432"
+	@echo "ClickHouse: localhost:8123"
+
+dev-backend: ## Start backend locally
+	cd backend && python -m uvicorn app.main:app --host 0.0.0.0 --port 8030 --reload
+
+dev-frontend: ## Start frontend locally
 	cd frontend && npm run dev
 
-# Start all development services
-dev:
-	@echo "Starting ClickHouse..."
-	docker-compose -f docker-compose.dev.yml up -d
-	@echo "Waiting for ClickHouse to be ready..."
-	@sleep 5
+dev: dev-db ## Start databases + show instructions
 	@echo ""
-	@echo "Start backend and frontend in separate terminals:"
-	@echo "  Terminal 1: make dev-backend"
-	@echo "  Terminal 2: make dev-frontend"
+	@echo "Databases ready. Start in separate terminals:"
+	@echo "  make dev-backend     (port 8030)"
+	@echo "  make dev-frontend    (port 3030)"
 
-# Production Docker Compose
-docker-up:
-	docker-compose up -d --build
+# ---- Utilities ----
 
-docker-down:
-	docker-compose down
-
-# Clean artifacts
-clean:
-	rm -rf frontend/node_modules frontend/dist
-	rm -rf backend/__pycache__ backend/.pytest_cache
-	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
-	find . -type f -name "*.pyc" -delete 2>/dev/null || true
-
-# Install dependencies
-install:
+install: ## Install all dependencies
 	cd frontend && npm install
 	cd backend && pip install -r requirements.txt
 
-# Build for production
-build:
+build: ## Build frontend
 	cd frontend && npm run build
+
+clean: ## Remove build artifacts
+	rm -rf frontend/node_modules frontend/dist
+	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
+	find . -type f -name "*.pyc" -delete 2>/dev/null || true

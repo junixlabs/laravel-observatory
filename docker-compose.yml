@@ -1,89 +1,87 @@
-version: '3.8'
-
 services:
   postgres:
     image: postgres:15-alpine
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     environment:
-      - POSTGRES_USER=sidmonitor
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-password}
-      - POSTGRES_DB=sidmonitor
+      POSTGRES_USER: sidmonitor
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_DB: sidmonitor
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
-      - monitoring
+      - sidmonitor
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U sidmonitor -d sidmonitor"]
       interval: 10s
       timeout: 5s
       retries: 5
 
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    ports:
-      - "3000:80"
-    depends_on:
-      - backend
-    environment:
-      - VITE_API_URL=http://localhost:8000
-    networks:
-      - monitoring
-
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    ports:
-      - "8000:8000"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      clickhouse:
-        condition: service_healthy
-    environment:
-      - HOST=0.0.0.0
-      - PORT=8000
-      - DEBUG=false
-      - DATABASE_URL=postgresql+asyncpg://sidmonitor:${POSTGRES_PASSWORD:-password}@postgres:5432/sidmonitor
-      - CLICKHOUSE_HOST=clickhouse
-      - CLICKHOUSE_PORT=8123
-      - CLICKHOUSE_DATABASE=sid_monitoring
-      - CLICKHOUSE_USER=default
-      - CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD:-}
-      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-change-this-in-production}
-      - AUTH_USERNAME=${AUTH_USERNAME:-admin}
-      - AUTH_PASSWORD=${AUTH_PASSWORD:-changeme}
-      - CORS_ORIGINS=http://localhost:3000
-    networks:
-      - monitoring
-
   clickhouse:
     image: clickhouse/clickhouse-server:23.8
     ports:
-      - "8123:8123"
-      - "9000:9000"
+      - "${CLICKHOUSE_HTTP_PORT:-8123}:8123"
+      - "${CLICKHOUSE_TCP_PORT:-9000}:9000"
     environment:
-      - CLICKHOUSE_DB=sid_monitoring
-      - CLICKHOUSE_USER=default
-      - CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1
+      CLICKHOUSE_DB: sid_monitoring
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
     volumes:
       - clickhouse_data:/var/lib/clickhouse
       - ./clickhouse/init:/docker-entrypoint-initdb.d
     networks:
-      - monitoring
+      - sidmonitor
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:8123/ping"]
       interval: 10s
       timeout: 5s
       retries: 5
 
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
+    environment:
+      HOST: 0.0.0.0
+      PORT: 8000
+      DEBUG: ${DEBUG:-false}
+      DATABASE_URL: postgresql+asyncpg://sidmonitor:${POSTGRES_PASSWORD:-password}@postgres:5432/sidmonitor
+      CLICKHOUSE_HOST: clickhouse
+      CLICKHOUSE_PORT: 8123
+      CLICKHOUSE_DATABASE: sid_monitoring
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-change-this-in-production}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+    networks:
+      - sidmonitor
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ""
+    ports:
+      - "${FRONTEND_PORT:-3000}:80"
+    depends_on:
+      - backend
+    networks:
+      - sidmonitor
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   clickhouse_data:
 
 networks:
-  monitoring:
+  sidmonitor:
     driver: bridge

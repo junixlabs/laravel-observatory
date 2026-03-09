@@ -2,6 +2,7 @@
 CREATE TABLE IF NOT EXISTS sid_monitoring.job_logs (
     id UUID DEFAULT generateUUIDv4(),
     project_id String,
+    timestamp DateTime64(3) DEFAULT now64(3),
     job_id String,
     job_uuid String,
     job_class String,

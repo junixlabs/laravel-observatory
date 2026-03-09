@@ -1,14 +1,14 @@
-version: '3.8'
-
+# Development: only databases (backend + frontend run locally)
+# Usage: docker compose -f docker-compose.dev.yml up -d
 services:
   postgres:
     image: postgres:15-alpine
     ports:
       - "5432:5432"
     environment:
-      - POSTGRES_USER=sidmonitor
-      - POSTGRES_PASSWORD=password
-      - POSTGRES_DB=sidmonitor
+      POSTGRES_USER: sidmonitor
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: sidmonitor
     volumes:
       - postgres_data_dev:/var/lib/postgresql/data
     healthcheck:
@@ -23,9 +23,9 @@ services:
       - "8123:8123"
       - "9000:9000"
     environment:
-      - CLICKHOUSE_DB=sid_monitoring
-      - CLICKHOUSE_USER=default
-      - CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1
+      CLICKHOUSE_DB: sid_monitoring
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
     volumes:
       - clickhouse_data_dev:/var/lib/clickhouse
       - ./clickhouse/init:/docker-entrypoint-initdb.d

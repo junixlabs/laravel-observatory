@@ -4,6 +4,7 @@ CREATE DATABASE IF NOT EXISTS sid_monitoring;
 -- Create logs table for storing request logs
 CREATE TABLE IF NOT EXISTS sid_monitoring.logs (
     id UUID DEFAULT generateUUIDv4(),
+    project_id String DEFAULT '',
     request_id String,
     timestamp DateTime64(3),
     endpoint String,
