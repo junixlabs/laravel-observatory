@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, Query, HTTPException
-from typing import Optional
+from typing import Optional, List
 import math
 import logging
 
@@ -241,7 +241,7 @@ async def get_log_by_id(
         raise HTTPException(status_code=500, detail="Error fetching log entry")
 
 
-@router.get("/modules")
+@router.get("/modules", response_model=List[str], summary="List all modules")
 async def get_modules(_: bool = Depends(verify_auth)):
     """Get list of all distinct modules from logs."""
     try:
@@ -259,7 +259,7 @@ async def get_modules(_: bool = Depends(verify_auth)):
         return []
 
 
-@router.get("/endpoints")
+@router.get("/endpoints", response_model=List[str], summary="List all endpoints")
 async def get_endpoints(_: bool = Depends(verify_auth)):
     """Get list of all distinct endpoints from logs."""
     try:

@@ -2,7 +2,7 @@ import logging
 import math
 import uuid
 from fastapi import APIRouter, HTTPException, Depends, Query, status
-from typing import Optional
+from typing import Optional, List
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.outbound import (
@@ -363,9 +363,9 @@ async def get_outbound_logs(
 # IMPORTANT: Specific routes MUST be defined BEFORE parameterized routes
 # Otherwise FastAPI will match "/services" as a log_id value
 
-@router.get("/logs/outbound/services")
+@router.get("/logs/outbound/services", response_model=List[str], summary="List outbound services")
 async def get_outbound_services(
-    project_id: Optional[str] = Query(None),
+    project_id: Optional[str] = Query(None, description="Filter by project ID (UUID)"),
     _: bool = Depends(verify_auth),
 ):
     """Get list of all distinct service names from outbound logs."""
@@ -391,9 +391,9 @@ async def get_outbound_services(
         return []
 
 
-@router.get("/logs/outbound/hosts")
+@router.get("/logs/outbound/hosts", response_model=List[str], summary="List outbound hosts")
 async def get_outbound_hosts(
-    project_id: Optional[str] = Query(None),
+    project_id: Optional[str] = Query(None, description="Filter by project ID (UUID)"),
     _: bool = Depends(verify_auth),
 ):
     """Get list of all distinct target hosts from outbound logs."""
