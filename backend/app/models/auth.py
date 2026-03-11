@@ -9,14 +9,14 @@ import uuid
 
 class UserRegister(BaseModel):
     """Schema for user registration request."""
-    email: EmailStr
+    email: EmailStr = Field(..., description="User email address")
     password: str = Field(..., min_length=8, description="Password must be at least 8 characters")
     name: str = Field(..., min_length=1, max_length=255, description="User display name")
 
 
 class UserLogin(BaseModel):
     """Schema for user login request."""
-    email: EmailStr
+    email: EmailStr = Field(..., description="User email address")
     password: str = Field(..., description="User password")
 
 

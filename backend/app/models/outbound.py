@@ -7,7 +7,7 @@ class OutboundLogEntry(BaseModel):
     """Log entry for outbound HTTP requests to third-party services."""
     # Required identifiers
     request_id: str = Field(..., description="Unique request identifier")
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=datetime.utcnow, description="Request timestamp (defaults to current UTC time)")
 
     # Service info
     service_name: str = Field(..., description="Name of the third-party service")
