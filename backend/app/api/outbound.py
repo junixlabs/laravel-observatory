@@ -522,7 +522,6 @@ def safe_float(value, default: float = 0.0) -> float:
         return default
 
 
-from typing import List
 from app.models.outbound import (
     OutboundOverallStats,
     OutboundServiceStats,

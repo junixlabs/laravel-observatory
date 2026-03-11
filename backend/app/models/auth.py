@@ -22,24 +22,24 @@ class UserLogin(BaseModel):
 
 class UserResponse(BaseModel):
     """Schema for user response (excludes password)."""
-    id: uuid.UUID
-    email: str
-    name: str
-    avatar_url: Optional[str] = None
-    created_at: datetime
+    id: uuid.UUID = Field(..., description="User UUID")
+    email: str = Field(..., description="User email address")
+    name: str = Field(..., description="User display name")
+    avatar_url: Optional[str] = Field(None, description="User avatar URL")
+    created_at: datetime = Field(..., description="Account creation timestamp")
 
     class Config:
         from_attributes = True
 
 
 class TokenResponse(BaseModel):
-    """Schema for JWT token response."""
-    access_token: str
-    token_type: str = "bearer"
-    user: UserResponse
+    """Schema for JWT token response after successful login."""
+    access_token: str = Field(..., description="JWT access token for authenticating subsequent requests")
+    token_type: str = Field("bearer", description="Token type (always 'bearer')")
+    user: UserResponse = Field(..., description="Authenticated user details")
 
 
 class UserUpdate(BaseModel):
     """Schema for updating user profile (all fields optional)."""
-    name: Optional[str] = Field(None, min_length=1, max_length=255)
-    avatar_url: Optional[str] = Field(None, max_length=500)
+    name: Optional[str] = Field(None, min_length=1, max_length=255, description="New display name")
+    avatar_url: Optional[str] = Field(None, max_length=500, description="New avatar URL")

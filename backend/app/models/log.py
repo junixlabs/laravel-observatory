@@ -2,10 +2,7 @@
 Pydantic models for general log query response schemas.
 """
 from pydantic import BaseModel, Field
-from typing import Optional, Generic, TypeVar
-from datetime import datetime
-
-T = TypeVar("T")
+from typing import Optional
 
 
 class LogEntry(BaseModel):
@@ -27,8 +24,8 @@ class LogEntry(BaseModel):
     response_body: Optional[str] = Field(None, description="Response body content (may be truncated)")
 
 
-class PaginatedResponse(BaseModel, Generic[T]):
-    """Generic paginated response wrapper."""
+class PaginatedResponse(BaseModel):
+    """Paginated response wrapper for list endpoints."""
     data: list = Field(..., description="List of items in the current page")
     total: int = Field(..., description="Total number of matching records")
     page: int = Field(..., description="Current page number (1-based)")
