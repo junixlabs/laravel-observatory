@@ -1,6 +1,6 @@
 # SidMonitor
 
-Application Performance Monitoring (APM) platform for Laravel and Python applications. Track inbound/outbound API requests, background jobs, scheduled tasks, and application health in real-time.
+Application Performance Monitoring (APM) platform for Laravel applications. Track inbound/outbound API requests, background jobs, scheduled tasks, and application health in real-time.
 
 ## Features
 
@@ -23,7 +23,7 @@ Application Performance Monitoring (APM) platform for Laravel and Python applica
 | Analytics DB | ClickHouse 23.8 (logs, metrics, materialized views) |
 | Metadata DB | PostgreSQL 15 (users, orgs, projects, API keys) |
 | Auth | JWT (python-jose) + bcrypt password hashing |
-| Client SDKs | Laravel (PHP), Python |
+| Client SDKs | Laravel (PHP) |
 
 ## Architecture
 
@@ -32,11 +32,10 @@ Application Performance Monitoring (APM) platform for Laravel and Python applica
 │  Laravel App    │────▶│  FastAPI Backend │────▶│  ClickHouse  │
 │  (SDK)          │     │  :8030           │     │  (Analytics) │
 └─────────────────┘     │                  │     └──────────────┘
-                        │                  │
-┌─────────────────┐     │                  │     ┌──────────────┐
-│  Python App     │────▶│  /api/ingest     │────▶│  PostgreSQL  │
-│  (SDK)          │     │  /api/ingest/job │     │  (Metadata)  │
-└─────────────────┘     │  /api/ingest/task│     └──────────────┘
+                        │  /api/ingest     │     ┌──────────────┐
+                        │  /api/ingest/job │────▶│  PostgreSQL  │
+                        │  /api/ingest/task│     │  (Metadata)  │
+                        │                  │     └──────────────┘
                         └────────┬─────────┘
                                  │
                         ┌────────▼─────────┐
@@ -174,8 +173,7 @@ monitoring/
 │   └── vite.config.ts
 ├── clickhouse/init/            # ClickHouse schema (3 init scripts)
 ├── packages/                   # Client SDKs
-│   ├── laravel/               # Laravel monitoring package
-│   └── python/                # Python monitoring package
+│   └── laravel/               # Laravel monitoring package
 ├── docker-compose.yml          # Production setup
 ├── docker-compose.dev.yml      # Development databases
 ├── Makefile                    # Development commands
