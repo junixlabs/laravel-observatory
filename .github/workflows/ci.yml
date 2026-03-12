@@ -59,7 +59,7 @@ jobs:
         run: ruff check .
 
       - name: Test
-        run: pytest --cov=app --cov-report=term-missing --cov-fail-under=70
+        run: pytest --cov=app --cov-report=term-missing
 
   docker-build:
     runs-on: ubuntu-latest

@@ -5,6 +5,7 @@ WORKDIR /app
 
 RUN pip install --no-cache-dir --upgrade pip
 COPY pyproject.toml .
+COPY app/ app/
 RUN pip install --no-cache-dir --user .
 
 # Production stage

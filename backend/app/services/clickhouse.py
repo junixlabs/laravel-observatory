@@ -131,6 +131,7 @@ def init_database():
         CREATE TABLE IF NOT EXISTS scheduled_task_logs (
             id UUID DEFAULT generateUUIDv4(),
             project_id String,
+            timestamp DateTime64(3) DEFAULT now64(3),
             task_id String,
             command String,
             description String,
