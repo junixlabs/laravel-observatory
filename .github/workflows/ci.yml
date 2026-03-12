@@ -53,11 +53,13 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install ruff
+          pip install ".[dev]"
 
       - name: Lint
         run: ruff check .
+
+      - name: Test
+        run: pytest --cov=app --cov-report=term-missing --cov-fail-under=70
 
   docker-build:
     runs-on: ubuntu-latest

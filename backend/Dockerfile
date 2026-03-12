@@ -4,8 +4,8 @@ FROM python:3.11-slim AS builder
 WORKDIR /app
 
 RUN pip install --no-cache-dir --upgrade pip
-COPY requirements.txt .
-RUN pip install --no-cache-dir --user -r requirements.txt
+COPY pyproject.toml .
+RUN pip install --no-cache-dir --user .
 
 # Production stage
 FROM python:3.11-slim
