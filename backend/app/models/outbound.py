@@ -41,12 +41,12 @@ class OutboundLogEntry(BaseModel):
     @model_validator(mode="after")
     def _derive_target_host(self) -> "OutboundLogEntry":
         """Derive target_host from target_url if not provided."""
-        if not self.target_host and self.target_url:
-            try:
+        if not self.target_host:
+            if self.target_url:
                 parsed = urlparse(self.target_url)
-                self.target_host = parsed.netloc or parsed.path.split("/")[0]
-            except Exception:
-                self.target_host = self.target_url
+                self.target_host = parsed.netloc or parsed.path.split("/")[0] or ""
+            else:
+                self.target_host = ""
         return self
 
     # Optional identifiers for distributed tracing
