@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.api.auth import verify_auth
 from app.api.stats._common import safe_float
+from app.services.query_builder import WhereBuilder
 from app.models.stats import (
     ModuleHealth,
     PerformancePercentiles,
@@ -39,19 +40,10 @@ async def get_service_health(
 
         client = get_clickhouse_client()
 
-        # Build additional conditions with parameterized queries
-        params = {}
-        additional_conditions = ""
-
-        if project_id:
-            additional_conditions += "AND toString(project_id) = %(project_id)s "
-            params["project_id"] = project_id
-        if start_date:
-            additional_conditions += "AND timestamp >= %(start_date)s "
-            params["start_date"] = start_date
-        if end_date:
-            additional_conditions += "AND timestamp <= %(end_date)s "
-            params["end_date"] = end_date
+        # Build additional conditions
+        wb = WhereBuilder()
+        wb.project(project_id).date_range(start_date, end_date)
+        additional_conditions, params = wb.build_and()
 
         query = f"""
             SELECT
@@ -106,19 +98,10 @@ async def get_module_health(
 
         client = get_clickhouse_client()
 
-        # Build additional conditions with parameterized queries
-        params = {}
-        additional_conditions = ""
-
-        if project_id:
-            additional_conditions += "AND toString(project_id) = %(project_id)s "
-            params["project_id"] = project_id
-        if start_date:
-            additional_conditions += "AND timestamp >= %(start_date)s "
-            params["start_date"] = start_date
-        if end_date:
-            additional_conditions += "AND timestamp <= %(end_date)s "
-            params["end_date"] = end_date
+        # Build additional conditions
+        wb = WhereBuilder()
+        wb.project(project_id).date_range(start_date, end_date)
+        additional_conditions, params = wb.build_and()
 
         query = f"""
             SELECT
@@ -168,29 +151,10 @@ async def get_performance_percentiles(
     try:
         client = get_clickhouse_client()
 
-        # Build WHERE conditions with parameterized queries
-        params = {}
-        conditions = []
-
-        if project_id:
-            conditions.append("toString(project_id) = %(project_id)s")
-            params["project_id"] = project_id
-
-        if start_date:
-            conditions.append("timestamp >= %(start_date)s")
-            params["start_date"] = start_date
-
-        if end_date:
-            conditions.append("timestamp <= %(end_date)s")
-            params["end_date"] = end_date
-
-        # Add type filter
-        if type == "inbound":
-            conditions.append("is_outbound = 0")
-        elif type == "outbound":
-            conditions.append("is_outbound = 1")
-
-        where_clause = "WHERE " + " AND ".join(conditions) if conditions else ""
+        # Build WHERE conditions
+        wb = WhereBuilder()
+        wb.project(project_id).date_range(start_date, end_date).request_type(type)
+        where_clause, params = wb.build()
 
         # Query percentiles using ClickHouse quantile functions
         query = f"""
@@ -239,23 +203,11 @@ async def get_slow_requests(
     try:
         client = get_clickhouse_client()
 
-        # Build WHERE conditions with parameterized queries
-        params = {"threshold_ms": threshold_ms}
-        conditions = []
-
-        if project_id:
-            conditions.append("toString(project_id) = %(project_id)s")
-            params["project_id"] = project_id
-
-        if start_date:
-            conditions.append("timestamp >= %(start_date)s")
-            params["start_date"] = start_date
-
-        if end_date:
-            conditions.append("timestamp <= %(end_date)s")
-            params["end_date"] = end_date
-
-        where_clause = "WHERE " + " AND ".join(conditions) if conditions else ""
+        # Build WHERE conditions
+        wb = WhereBuilder()
+        wb.project(project_id).date_range(start_date, end_date)
+        where_clause, params = wb.build()
+        params["threshold_ms"] = threshold_ms
 
         # Query for total and slow request counts
         count_query = f"""
@@ -274,9 +226,10 @@ async def get_slow_requests(
         slow_percentage = round((slow_count / total_requests * 100), 2) if total_requests > 0 else 0.0
 
         # Query for slowest endpoints
-        slowest_conditions = conditions.copy()
-        slowest_conditions.append("response_time_ms >= %(threshold_ms)s")
-        slowest_where_clause = "WHERE " + " AND ".join(slowest_conditions) if slowest_conditions else "WHERE response_time_ms >= %(threshold_ms)s"
+        inner_wb = WhereBuilder()
+        inner_wb.project(project_id).date_range(start_date, end_date)
+        inner_wb.raw("response_time_ms >= %(threshold_ms)s", threshold_ms=threshold_ms)
+        slowest_where_clause, slowest_params = inner_wb.build()
 
         slowest_query = f"""
             SELECT
@@ -291,7 +244,7 @@ async def get_slow_requests(
             LIMIT 10
         """
 
-        slowest_result = client.query(slowest_query, parameters=params)
+        slowest_result = client.query(slowest_query, parameters=slowest_params)
 
         slowest_endpoints = []
         for row in slowest_result.result_rows:
@@ -332,23 +285,10 @@ async def get_performance_timeline(
         }
         time_func = interval_map.get(interval, "toStartOfHour")
 
-        # Build WHERE conditions with parameterized queries
-        params = {}
-        conditions = []
-
-        if project_id:
-            conditions.append("toString(project_id) = %(project_id)s")
-            params["project_id"] = project_id
-
-        if start_date:
-            conditions.append("timestamp >= parseDateTimeBestEffort(%(start_date)s)")
-            params["start_date"] = start_date
-
-        if end_date:
-            conditions.append("timestamp <= parseDateTimeBestEffort(%(end_date)s)")
-            params["end_date"] = end_date
-
-        where_clause = "WHERE " + " AND ".join(conditions) if conditions else ""
+        # Build WHERE conditions
+        wb = WhereBuilder()
+        wb.project(project_id).date_range(start_date, end_date, best_effort=True)
+        where_clause, params = wb.build()
 
         # Query percentiles over time
         query = f"""

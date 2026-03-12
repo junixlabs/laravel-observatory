@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.api.auth import verify_auth
 from app.api.stats._common import safe_float
+from app.services.query_builder import WhereBuilder
 from app.models.stats import (
     PeakHourStats,
     ThroughputStats,
@@ -32,23 +33,10 @@ async def get_traffic_by_method(
     try:
         client = get_clickhouse_client()
 
-        # Build WHERE conditions with parameterized queries
-        params = {}
-        conditions = []
-
-        if project_id:
-            conditions.append("toString(project_id) = %(project_id)s")
-            params["project_id"] = project_id
-
-        if start_date:
-            conditions.append("timestamp >= %(start_date)s")
-            params["start_date"] = start_date
-
-        if end_date:
-            conditions.append("timestamp <= %(end_date)s")
-            params["end_date"] = end_date
-
-        where_clause = "WHERE " + " AND ".join(conditions) if conditions else ""
+        # Build WHERE conditions
+        wb = WhereBuilder()
+        wb.project(project_id).date_range(start_date, end_date)
+        where_clause, params = wb.build()
 
         query = f"""
             SELECT
@@ -101,23 +89,10 @@ async def get_peak_hours(
     try:
         client = get_clickhouse_client()
 
-        # Build WHERE conditions with parameterized queries
-        params = {}
-        conditions = []
-
-        if project_id:
-            conditions.append("toString(project_id) = %(project_id)s")
-            params["project_id"] = project_id
-
-        if start_date:
-            conditions.append("timestamp >= %(start_date)s")
-            params["start_date"] = start_date
-
-        if end_date:
-            conditions.append("timestamp <= %(end_date)s")
-            params["end_date"] = end_date
-
-        where_clause = "WHERE " + " AND ".join(conditions) if conditions else ""
+        # Build WHERE conditions
+        wb = WhereBuilder()
+        wb.project(project_id).date_range(start_date, end_date)
+        where_clause, params = wb.build()
 
         query = f"""
             SELECT
@@ -187,23 +162,10 @@ async def get_traffic_by_day(
     try:
         client = get_clickhouse_client()
 
-        # Build WHERE conditions with parameterized queries
-        params = {}
-        conditions = []
-
-        if project_id:
-            conditions.append("toString(project_id) = %(project_id)s")
-            params["project_id"] = project_id
-
-        if start_date:
-            conditions.append("timestamp >= %(start_date)s")
-            params["start_date"] = start_date
-
-        if end_date:
-            conditions.append("timestamp <= %(end_date)s")
-            params["end_date"] = end_date
-
-        where_clause = "WHERE " + " AND ".join(conditions) if conditions else ""
+        # Build WHERE conditions
+        wb = WhereBuilder()
+        wb.project(project_id).date_range(start_date, end_date)
+        where_clause, params = wb.build()
 
         query = f"""
             SELECT
@@ -270,23 +232,10 @@ async def get_throughput(
     try:
         client = get_clickhouse_client()
 
-        # Build WHERE conditions with parameterized queries
-        params = {}
-        conditions = []
-
-        if project_id:
-            conditions.append("toString(project_id) = %(project_id)s")
-            params["project_id"] = project_id
-
-        if start_date:
-            conditions.append("timestamp >= %(start_date)s")
-            params["start_date"] = start_date
-
-        if end_date:
-            conditions.append("timestamp <= %(end_date)s")
-            params["end_date"] = end_date
-
-        where_clause = "WHERE " + " AND ".join(conditions) if conditions else ""
+        # Build WHERE conditions
+        wb = WhereBuilder()
+        wb.project(project_id).date_range(start_date, end_date)
+        where_clause, params = wb.build()
 
         # Map interval to ClickHouse function
         time_func = "toStartOfMinute" if interval == "minute" else "toStartOfHour"

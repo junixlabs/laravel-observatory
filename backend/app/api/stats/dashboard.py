@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.api.auth import verify_auth
 from app.api.stats._common import safe_float
+from app.services.query_builder import WhereBuilder
 from app.models.stats import (
     DashboardStats,
     EndpointStats,
@@ -35,29 +36,10 @@ async def get_dashboard_stats(
     try:
         client = get_clickhouse_client()
 
-        # Build WHERE conditions with parameterized queries
-        params = {}
-        conditions = []
-
-        if project_id:
-            conditions.append("toString(project_id) = %(project_id)s")
-            params["project_id"] = project_id
-
-        if start_date:
-            conditions.append("timestamp >= %(start_date)s")
-            params["start_date"] = start_date
-
-        if end_date:
-            conditions.append("timestamp <= %(end_date)s")
-            params["end_date"] = end_date
-
-        # Add type filter
-        if type == "inbound":
-            conditions.append("is_outbound = 0")
-        elif type == "outbound":
-            conditions.append("is_outbound = 1")
-
-        where_clause = "WHERE " + " AND ".join(conditions) if conditions else ""
+        # Build WHERE conditions
+        wb = WhereBuilder()
+        wb.project(project_id).date_range(start_date, end_date).request_type(type)
+        where_clause, params = wb.build()
 
         # Current period query
         query = f"""
@@ -75,10 +57,9 @@ async def get_dashboard_stats(
 
         # Previous period query for trend comparison
         # Calculate the time range to determine previous period
-        prev_params = params.copy()
-        prev_conditions = []
+        prev_wb = WhereBuilder()
+        prev_wb.project(project_id).request_type(type)
 
-        # Build previous period conditions
         if start_date and end_date:
             # Calculate previous period with same duration
             prev_period_query = """
@@ -90,24 +71,16 @@ async def get_dashboard_stats(
             if period_result.result_rows:
                 prev_start = period_result.result_rows[0][0]
                 prev_end = period_result.result_rows[0][1]
-                prev_conditions.append("timestamp >= %(prev_start_date)s")
-                prev_conditions.append("timestamp < %(prev_end_date)s")
-                prev_params["prev_start_date"] = prev_start.isoformat() if hasattr(prev_start, 'isoformat') else str(prev_start)
-                prev_params["prev_end_date"] = prev_end.isoformat() if hasattr(prev_end, 'isoformat') else str(prev_end)
+                prev_start_str = prev_start.isoformat() if hasattr(prev_start, 'isoformat') else str(prev_start)
+                prev_end_str = prev_end.isoformat() if hasattr(prev_end, 'isoformat') else str(prev_end)
+                prev_wb.raw("timestamp >= %(prev_start_date)s", prev_start_date=prev_start_str)
+                prev_wb.raw("timestamp < %(prev_end_date)s", prev_end_date=prev_end_str)
         else:
             # Default to comparing last 24h with previous 24h
-            prev_conditions.append("timestamp >= now() - INTERVAL 48 HOUR")
-            prev_conditions.append("timestamp < now() - INTERVAL 24 HOUR")
+            prev_wb.raw("timestamp >= now() - INTERVAL 48 HOUR")
+            prev_wb.raw("timestamp < now() - INTERVAL 24 HOUR")
 
-        # Add other filters to previous period
-        if project_id:
-            prev_conditions.append("toString(project_id) = %(project_id)s")
-        if type == "inbound":
-            prev_conditions.append("is_outbound = 0")
-        elif type == "outbound":
-            prev_conditions.append("is_outbound = 1")
-
-        prev_where_clause = "WHERE " + " AND ".join(prev_conditions) if prev_conditions else ""
+        prev_where_clause, prev_params = prev_wb.build()
 
         prev_query = f"""
             SELECT
@@ -190,35 +163,11 @@ async def get_timeseries_data(
         }
         time_func = interval_map.get(interval, "toStartOfHour")
 
-        # Build WHERE conditions with parameterized queries
-        params = {}
-        conditions = []
-        if project_id:
-            conditions.append("toString(project_id) = %(project_id)s")
-            params["project_id"] = project_id
-        if start_date:
-            # Use parseDateTimeBestEffort for better ISO 8601 support (handles 'Z' suffix)
-            conditions.append("timestamp >= parseDateTimeBestEffort(%(start_date)s)")
-            params["start_date"] = start_date
-        if end_date:
-            conditions.append("timestamp <= parseDateTimeBestEffort(%(end_date)s)")
-            params["end_date"] = end_date
-        if module:
-            conditions.append("module = %(module)s")
-            params["module"] = module
-        if endpoint:
-            conditions.append("endpoint = %(endpoint)s")
-            params["endpoint"] = endpoint
-
-        # Add type filter
-        if type == "inbound":
-            conditions.append("is_outbound = 0")
-        elif type == "outbound":
-            conditions.append("is_outbound = 1")
-
-        where_clause = ""
-        if conditions:
-            where_clause = "WHERE " + " AND ".join(conditions)
+        # Build WHERE conditions
+        wb = WhereBuilder()
+        wb.project(project_id).date_range(start_date, end_date, best_effort=True).request_type(type)
+        wb.eq("module", module).eq("endpoint", endpoint)
+        where_clause, params = wb.build()
 
         query = f"""
             SELECT
@@ -260,27 +209,10 @@ async def get_top_endpoints(
     try:
         client = get_clickhouse_client()
 
-        # Build WHERE conditions with parameterized queries
-        params = {}
-        conditions = []
-
-        if project_id:
-            conditions.append("toString(project_id) = %(project_id)s")
-            params["project_id"] = project_id
-        if start_date:
-            conditions.append("timestamp >= %(start_date)s")
-            params["start_date"] = start_date
-        if end_date:
-            conditions.append("timestamp <= %(end_date)s")
-            params["end_date"] = end_date
-
-        # Add type filter
-        if type == "inbound":
-            conditions.append("is_outbound = 0")
-        elif type == "outbound":
-            conditions.append("is_outbound = 1")
-
-        where_clause = "WHERE " + " AND ".join(conditions) if conditions else ""
+        # Build WHERE conditions
+        wb = WhereBuilder()
+        wb.project(project_id).date_range(start_date, end_date).request_type(type)
+        where_clause, params = wb.build()
 
         # Add limit parameter to prevent SQL injection
         params["limit"] = limit
@@ -330,23 +262,10 @@ async def get_request_counts(
     try:
         client = get_clickhouse_client()
 
-        # Build WHERE conditions with parameterized queries
-        params = {}
-        conditions = []
-
-        if project_id:
-            conditions.append("toString(project_id) = %(project_id)s")
-            params["project_id"] = project_id
-
-        if start_date:
-            conditions.append("timestamp >= %(start_date)s")
-            params["start_date"] = start_date
-
-        if end_date:
-            conditions.append("timestamp <= %(end_date)s")
-            params["end_date"] = end_date
-
-        where_clause = "WHERE " + " AND ".join(conditions) if conditions else ""
+        # Build WHERE conditions
+        wb = WhereBuilder()
+        wb.project(project_id).date_range(start_date, end_date)
+        where_clause, params = wb.build()
 
         query = f"""
             SELECT
@@ -380,19 +299,10 @@ async def get_global_dashboard_stats(
     try:
         client = get_clickhouse_client()
 
-        # Build WHERE conditions with parameterized queries
-        params = {}
-        conditions = []
-
-        if start_date:
-            conditions.append("timestamp >= %(start_date)s")
-            params["start_date"] = start_date
-
-        if end_date:
-            conditions.append("timestamp <= %(end_date)s")
-            params["end_date"] = end_date
-
-        where_clause = "WHERE " + " AND ".join(conditions) if conditions else ""
+        # Build WHERE conditions
+        wb = WhereBuilder()
+        wb.date_range(start_date, end_date)
+        where_clause, params = wb.build()
 
         # Query to get stats per project (last 24h if no date range specified)
         query = f"""
