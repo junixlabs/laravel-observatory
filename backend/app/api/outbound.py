@@ -23,6 +23,7 @@ from app.models.outbound import (
     OutboundServiceStats,
 )
 from app.services.clickhouse import get_clickhouse_client
+from app.services.query_builder import WhereBuilder
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -179,70 +180,6 @@ async def ingest_outbound_batch(
 # Query Endpoints
 # ============================================
 
-def build_outbound_where_clause(
-    project_id: Optional[str] = None,
-    service_name: Optional[str] = None,
-    target_host: Optional[str] = None,
-    status: Optional[str] = None,
-    method: Optional[str] = None,
-    request_id: Optional[str] = None,
-    trace_id: Optional[str] = None,
-    start_date: Optional[str] = None,
-    end_date: Optional[str] = None,
-) -> tuple[str, dict]:
-    """Build WHERE clause for outbound logs query."""
-    conditions = []
-    params = {}
-
-    if project_id:
-        conditions.append("toString(project_id) = %(project_id)s")
-        params["project_id"] = project_id
-
-    if service_name:
-        conditions.append("service_name = %(service_name)s")
-        params["service_name"] = service_name
-
-    if target_host:
-        conditions.append("target_host LIKE %(target_host)s")
-        params["target_host"] = f"%{target_host}%"
-
-    if status:
-        if status == "2xx":
-            conditions.append("status_code >= 200 AND status_code < 300")
-        elif status == "3xx":
-            conditions.append("status_code >= 300 AND status_code < 400")
-        elif status == "4xx":
-            conditions.append("status_code >= 400 AND status_code < 500")
-        elif status == "5xx":
-            conditions.append("status_code >= 500")
-        elif status == "error":
-            conditions.append("status_code >= 400")
-        elif status == "success":
-            conditions.append("status_code >= 200 AND status_code < 400")
-
-    if method:
-        conditions.append("method = %(method)s")
-        params["method"] = method.upper()
-
-    if request_id:
-        conditions.append("request_id LIKE %(request_id)s")
-        params["request_id"] = f"%{request_id}%"
-
-    if trace_id:
-        conditions.append("trace_id = %(trace_id)s")
-        params["trace_id"] = trace_id
-
-    if start_date:
-        conditions.append("timestamp >= %(start_date)s")
-        params["start_date"] = start_date
-
-    if end_date:
-        conditions.append("timestamp <= %(end_date)s")
-        params["end_date"] = end_date
-
-    where_clause = " AND ".join(conditions) if conditions else "1=1"
-    return where_clause, params
-
 
 @router.get("/logs/outbound", response_model=OutboundPaginatedResponse)
 async def get_outbound_logs(
@@ -263,17 +200,15 @@ async def get_outbound_logs(
     try:
         client = get_clickhouse_client()
 
-        where_clause, params = build_outbound_where_clause(
-            project_id=project_id,
-            service_name=service_name,
-            target_host=target_host,
-            status=status,
-            method=method,
-            request_id=request_id,
-            trace_id=trace_id,
-            start_date=start_date,
-            end_date=end_date,
-        )
+        wb = WhereBuilder()
+        wb.project(project_id).date_range(start_date, end_date)
+        wb.eq("service_name", service_name)
+        wb.like("target_host", target_host)
+        wb.status_code(status)
+        wb.eq("method", method.upper() if method else None)
+        wb.like("request_id", request_id)
+        wb.eq("trace_id", trace_id)
+        where_clause, params = wb.build_conditions()
         offset = (page - 1) * page_size
 
         # Get total count
@@ -369,16 +304,14 @@ async def get_outbound_services(
     try:
         client = get_clickhouse_client()
 
-        params = {}
-        where_clause = "1=1"
-        if project_id:
-            where_clause = "toString(project_id) = %(project_id)s"
-            params["project_id"] = project_id
+        wb = WhereBuilder()
+        wb.project(project_id).not_empty("service_name")
+        where_clause, params = wb.build()
 
         query = f"""
             SELECT DISTINCT service_name
             FROM outbound_logs
-            WHERE {where_clause} AND service_name != ''
+            {where_clause}
             ORDER BY service_name
         """
         result = client.query(query, parameters=params)
@@ -397,16 +330,14 @@ async def get_outbound_hosts(
     try:
         client = get_clickhouse_client()
 
-        params = {}
-        where_clause = "1=1"
-        if project_id:
-            where_clause = "toString(project_id) = %(project_id)s"
-            params["project_id"] = project_id
+        wb = WhereBuilder()
+        wb.project(project_id).not_empty("target_host")
+        where_clause, params = wb.build()
 
         query = f"""
             SELECT DISTINCT target_host
             FROM outbound_logs
-            WHERE {where_clause} AND target_host != ''
+            {where_clause}
             ORDER BY target_host
         """
         result = client.query(query, parameters=params)
@@ -517,22 +448,9 @@ async def get_outbound_stats(
     try:
         client = get_clickhouse_client()
 
-        params = {}
-        conditions = []
-
-        if project_id:
-            conditions.append("toString(project_id) = %(project_id)s")
-            params["project_id"] = project_id
-
-        if start_date:
-            conditions.append("timestamp >= %(start_date)s")
-            params["start_date"] = start_date
-
-        if end_date:
-            conditions.append("timestamp <= %(end_date)s")
-            params["end_date"] = end_date
-
-        where_clause = "WHERE " + " AND ".join(conditions) if conditions else ""
+        wb = WhereBuilder()
+        wb.project(project_id).date_range(start_date, end_date)
+        where_clause, params = wb.build()
 
         query = f"""
             SELECT
@@ -580,22 +498,11 @@ async def get_outbound_stats_by_service(
     try:
         client = get_clickhouse_client()
 
-        params = {"limit": limit}
-        conditions = ["service_name != ''"]
-
-        if project_id:
-            conditions.append("toString(project_id) = %(project_id)s")
-            params["project_id"] = project_id
-
-        if start_date:
-            conditions.append("timestamp >= %(start_date)s")
-            params["start_date"] = start_date
-
-        if end_date:
-            conditions.append("timestamp <= %(end_date)s")
-            params["end_date"] = end_date
-
-        where_clause = "WHERE " + " AND ".join(conditions)
+        wb = WhereBuilder()
+        wb.project(project_id).date_range(start_date, end_date)
+        wb.not_empty("service_name")
+        where_clause, params = wb.build()
+        params["limit"] = limit
 
         query = f"""
             SELECT
@@ -652,22 +559,11 @@ async def get_outbound_service_endpoints(
     try:
         client = get_clickhouse_client()
 
-        params = {"service_name": service_name, "limit": limit}
-        conditions = ["service_name = %(service_name)s"]
-
-        if project_id:
-            conditions.append("toString(project_id) = %(project_id)s")
-            params["project_id"] = project_id
-
-        if start_date:
-            conditions.append("timestamp >= %(start_date)s")
-            params["start_date"] = start_date
-
-        if end_date:
-            conditions.append("timestamp <= %(end_date)s")
-            params["end_date"] = end_date
-
-        where_clause = "WHERE " + " AND ".join(conditions)
+        wb = WhereBuilder()
+        wb.project(project_id).date_range(start_date, end_date)
+        wb.eq("service_name", service_name)
+        where_clause, params = wb.build()
+        params["limit"] = limit
 
         # Extract path from target_url and normalize numeric segments to {id}
         # Use ClickHouse's URL functions and regex to group similar endpoints
@@ -735,22 +631,11 @@ async def get_outbound_stats_by_host(
     try:
         client = get_clickhouse_client()
 
-        params = {"limit": limit}
-        conditions = ["target_host != ''"]
-
-        if project_id:
-            conditions.append("toString(project_id) = %(project_id)s")
-            params["project_id"] = project_id
-
-        if start_date:
-            conditions.append("timestamp >= %(start_date)s")
-            params["start_date"] = start_date
-
-        if end_date:
-            conditions.append("timestamp <= %(end_date)s")
-            params["end_date"] = end_date
-
-        where_clause = "WHERE " + " AND ".join(conditions)
+        wb = WhereBuilder()
+        wb.project(project_id).date_range(start_date, end_date)
+        wb.not_empty("target_host")
+        where_clause, params = wb.build()
+        params["limit"] = limit
 
         query = f"""
             SELECT

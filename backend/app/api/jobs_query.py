@@ -20,6 +20,7 @@ from app.models.jobs import (
 )
 from app.models.log import PaginatedResponse
 from app.services.clickhouse import get_clickhouse_client
+from app.services.query_builder import WhereBuilder
 
 logger = logging.getLogger(__name__)
 
@@ -43,8 +44,8 @@ async def get_jobs(
     queue_name: Optional[str] = Query(None, description="Filter by queue name"),
     job_class: Optional[str] = Query(None, description="Filter by job class"),
     status: Optional[str] = Query(None, description="Filter by status: started, completed, failed, retrying"),
-    from_date: Optional[str] = Query(None, description="Start date filter"),
-    to_date: Optional[str] = Query(None, description="End date filter"),
+    start_date: Optional[str] = Query(None, description="Start date filter"),
+    end_date: Optional[str] = Query(None, description="End date filter"),
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=100),
     _: bool = Depends(verify_auth),
@@ -54,30 +55,10 @@ async def get_jobs(
         client = get_clickhouse_client()
 
         # Build WHERE conditions
-        conditions = ["toString(project_id) = %(project_id)s"]
-        params = {"project_id": project_id}
-
-        if queue_name:
-            conditions.append("queue_name = %(queue_name)s")
-            params["queue_name"] = queue_name
-
-        if job_class:
-            conditions.append("job_class = %(job_class)s")
-            params["job_class"] = job_class
-
-        if status:
-            conditions.append("status = %(status)s")
-            params["status"] = status
-
-        if from_date:
-            conditions.append("started_at >= %(from_date)s")
-            params["from_date"] = from_date
-
-        if to_date:
-            conditions.append("started_at <= %(to_date)s")
-            params["to_date"] = to_date
-
-        where_clause = " AND ".join(conditions)
+        wb = WhereBuilder()
+        wb.project(project_id).date_range(start_date, end_date, field="started_at")
+        wb.eq("queue_name", queue_name).eq("job_class", job_class).eq("status", status)
+        where_clause, params = wb.build_conditions()
         offset = (page - 1) * page_size
 
         # Get total count
@@ -170,17 +151,10 @@ async def get_job_stats(
         interval = parse_timeframe(timeframe)
 
         # Build WHERE conditions
-        conditions = [
-            "toString(project_id) = %(project_id)s",
-            f"started_at >= now() - {interval}"
-        ]
-        params = {"project_id": project_id}
-
-        if queue_name:
-            conditions.append("queue_name = %(queue_name)s")
-            params["queue_name"] = queue_name
-
-        where_clause = " AND ".join(conditions)
+        wb = WhereBuilder()
+        wb.project(project_id).raw(f"started_at >= now() - {interval}")
+        wb.eq("queue_name", queue_name)
+        where_clause, params = wb.build_conditions()
 
         # Overall stats with P50, P95, P99 and additional status counts
         overall_query = f"""
@@ -329,7 +303,9 @@ async def get_job_timeline(
         }
         time_func = interval_map.get(interval, "toStartOfHour")
 
-        params = {"project_id": project_id}
+        wb = WhereBuilder()
+        wb.project(project_id).raw(f"started_at >= now() - {timeframe_interval}")
+        where_clause, params = wb.build_conditions()
 
         query = f"""
             SELECT
@@ -342,8 +318,7 @@ async def get_job_timeline(
                 countIf(status = 'cancelled') as cancelled,
                 countIf(status = 'timeout') as timeout
             FROM job_logs
-            WHERE toString(project_id) = %(project_id)s
-                AND started_at >= now() - {timeframe_interval}
+            WHERE {where_clause}
             GROUP BY time_bucket
             ORDER BY time_bucket ASC
         """
@@ -375,8 +350,8 @@ async def get_scheduled_tasks(
     project_id: str = Query(..., description="Filter by project ID (UUID)"),
     command: Optional[str] = Query(None, description="Filter by command"),
     status: Optional[str] = Query(None, description="Filter by status"),
-    from_date: Optional[str] = Query(None, description="Start date filter"),
-    to_date: Optional[str] = Query(None, description="End date filter"),
+    start_date: Optional[str] = Query(None, description="Start date filter"),
+    end_date: Optional[str] = Query(None, description="End date filter"),
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=100),
     _: bool = Depends(verify_auth),
@@ -386,26 +361,10 @@ async def get_scheduled_tasks(
         client = get_clickhouse_client()
 
         # Build WHERE conditions
-        conditions = ["toString(project_id) = %(project_id)s"]
-        params = {"project_id": project_id}
-
-        if command:
-            conditions.append("command = %(command)s")
-            params["command"] = command
-
-        if status:
-            conditions.append("status = %(status)s")
-            params["status"] = status
-
-        if from_date:
-            conditions.append("scheduled_at >= %(from_date)s")
-            params["from_date"] = from_date
-
-        if to_date:
-            conditions.append("scheduled_at <= %(to_date)s")
-            params["to_date"] = to_date
-
-        where_clause = " AND ".join(conditions)
+        wb = WhereBuilder()
+        wb.project(project_id).date_range(start_date, end_date, field="scheduled_at")
+        wb.eq("command", command).eq("status", status)
+        where_clause, params = wb.build_conditions()
         offset = (page - 1) * page_size
 
         # Get total count
@@ -496,12 +455,9 @@ async def get_scheduled_task_stats(
         client = get_clickhouse_client()
         interval = parse_timeframe(timeframe)
 
-        conditions = [
-            "toString(project_id) = %(project_id)s",
-            f"scheduled_at >= now() - {interval}"
-        ]
-        params = {"project_id": project_id}
-        where_clause = " AND ".join(conditions)
+        wb = WhereBuilder()
+        wb.project(project_id).raw(f"scheduled_at >= now() - {interval}")
+        where_clause, params = wb.build_conditions()
 
         # Overall stats
         overall_query = f"""

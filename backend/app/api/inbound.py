@@ -20,76 +20,10 @@ from app.models.inbound import (
     InboundPaginatedResponse,
 )
 from app.services.clickhouse import get_clickhouse_client
+from app.services.query_builder import WhereBuilder
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
-
-
-def build_inbound_where_clause(
-    project_id: Optional[str] = None,
-    status: Optional[str] = None,
-    module: Optional[str] = None,
-    endpoint: Optional[str] = None,
-    method: Optional[str] = None,
-    user: Optional[str] = None,
-    request_id: Optional[str] = None,
-    start_date: Optional[str] = None,
-    end_date: Optional[str] = None,
-) -> tuple[str, dict]:
-    """Build WHERE clause for inbound logs query."""
-    # Base condition: only inbound logs
-    conditions = ["is_outbound = 0"]
-    params = {}
-
-    if project_id:
-        conditions.append("toString(project_id) = %(project_id)s")
-        params["project_id"] = project_id
-
-    if status:
-        if status == "2xx":
-            conditions.append("status_code >= 200 AND status_code < 300")
-        elif status == "3xx":
-            conditions.append("status_code >= 300 AND status_code < 400")
-        elif status == "4xx":
-            conditions.append("status_code >= 400 AND status_code < 500")
-        elif status == "5xx":
-            conditions.append("status_code >= 500")
-        elif status == "error":
-            conditions.append("status_code >= 400")
-        elif status == "success":
-            conditions.append("status_code >= 200 AND status_code < 400")
-
-    if module:
-        conditions.append("module = %(module)s")
-        params["module"] = module
-
-    if endpoint:
-        conditions.append("endpoint LIKE %(endpoint)s")
-        params["endpoint"] = f"%{endpoint}%"
-
-    if method:
-        conditions.append("method = %(method)s")
-        params["method"] = method.upper()
-
-    if user:
-        conditions.append("(user_id = %(user)s OR user_name LIKE %(user_pattern)s)")
-        params["user"] = user
-        params["user_pattern"] = f"%{user}%"
-
-    if request_id:
-        conditions.append("request_id LIKE %(request_id)s")
-        params["request_id"] = f"%{request_id}%"
-
-    if start_date:
-        conditions.append("timestamp >= %(start_date)s")
-        params["start_date"] = start_date
-
-    if end_date:
-        conditions.append("timestamp <= %(end_date)s")
-        params["end_date"] = end_date
-
-    where_clause = " AND ".join(conditions)
-    return where_clause, params
 
 
 # ============================================
@@ -107,22 +41,9 @@ async def get_inbound_stats(
     try:
         client = get_clickhouse_client()
 
-        params = {}
-        conditions = ["is_outbound = 0"]
-
-        if project_id:
-            conditions.append("toString(project_id) = %(project_id)s")
-            params["project_id"] = project_id
-
-        if start_date:
-            conditions.append("timestamp >= %(start_date)s")
-            params["start_date"] = start_date
-
-        if end_date:
-            conditions.append("timestamp <= %(end_date)s")
-            params["end_date"] = end_date
-
-        where_clause = "WHERE " + " AND ".join(conditions)
+        wb = WhereBuilder()
+        wb.inbound_only().project(project_id).date_range(start_date, end_date)
+        where_clause, params = wb.build()
 
         query = f"""
             SELECT
@@ -166,22 +87,10 @@ async def get_inbound_stats_by_module(
     try:
         client = get_clickhouse_client()
 
-        params = {"limit": limit}
-        conditions = ["is_outbound = 0", "module IS NOT NULL", "module != ''"]
-
-        if project_id:
-            conditions.append("toString(project_id) = %(project_id)s")
-            params["project_id"] = project_id
-
-        if start_date:
-            conditions.append("timestamp >= %(start_date)s")
-            params["start_date"] = start_date
-
-        if end_date:
-            conditions.append("timestamp <= %(end_date)s")
-            params["end_date"] = end_date
-
-        where_clause = "WHERE " + " AND ".join(conditions)
+        wb = WhereBuilder()
+        wb.inbound_only().project(project_id).date_range(start_date, end_date).not_empty("module")
+        where_clause, params = wb.build()
+        params["limit"] = limit
 
         query = f"""
             SELECT
@@ -238,22 +147,10 @@ async def get_inbound_module_endpoints(
     try:
         client = get_clickhouse_client()
 
-        params = {"module_name": module_name, "limit": limit}
-        conditions = ["is_outbound = 0", "module = %(module_name)s"]
-
-        if project_id:
-            conditions.append("toString(project_id) = %(project_id)s")
-            params["project_id"] = project_id
-
-        if start_date:
-            conditions.append("timestamp >= %(start_date)s")
-            params["start_date"] = start_date
-
-        if end_date:
-            conditions.append("timestamp <= %(end_date)s")
-            params["end_date"] = end_date
-
-        where_clause = "WHERE " + " AND ".join(conditions)
+        wb = WhereBuilder()
+        wb.inbound_only().eq("module", module_name, param_name="module_name").project(project_id).date_range(start_date, end_date)
+        where_clause, params = wb.build()
+        params["limit"] = limit
 
         # Normalize endpoint by replacing numeric segments with {id}
         query = f"""
@@ -325,17 +222,12 @@ async def get_inbound_logs(
     try:
         client = get_clickhouse_client()
 
-        where_clause, params = build_inbound_where_clause(
-            project_id=project_id,
-            status=status,
-            module=module,
-            endpoint=endpoint,
-            method=method,
-            user=user,
-            request_id=request_id,
-            start_date=start_date,
-            end_date=end_date,
-        )
+        wb = WhereBuilder()
+        wb.inbound_only().project(project_id).date_range(start_date, end_date)
+        wb.status_code(status).eq("module", module).like("endpoint", endpoint)
+        wb.eq("method", method.upper() if method else None).user_search(user)
+        wb.like("request_id", request_id)
+        where_clause, params = wb.build_conditions()
         offset = (page - 1) * page_size
 
         # Get total count
@@ -409,19 +301,14 @@ async def get_inbound_modules(
     try:
         client = get_clickhouse_client()
 
-        params = {}
-        conditions = ["is_outbound = 0", "module IS NOT NULL", "module != ''"]
-
-        if project_id:
-            conditions.append("toString(project_id) = %(project_id)s")
-            params["project_id"] = project_id
-
-        where_clause = " AND ".join(conditions)
+        wb = WhereBuilder()
+        wb.inbound_only().not_empty("module").project(project_id)
+        where_clause, params = wb.build()
 
         query = f"""
             SELECT DISTINCT module
             FROM logs
-            WHERE {where_clause}
+            {where_clause}
             ORDER BY module
         """
         result = client.query(query, parameters=params)
@@ -441,23 +328,14 @@ async def get_inbound_endpoints(
     try:
         client = get_clickhouse_client()
 
-        params = {}
-        conditions = ["is_outbound = 0", "endpoint IS NOT NULL", "endpoint != ''"]
-
-        if project_id:
-            conditions.append("toString(project_id) = %(project_id)s")
-            params["project_id"] = project_id
-
-        if module:
-            conditions.append("module = %(module)s")
-            params["module"] = module
-
-        where_clause = " AND ".join(conditions)
+        wb = WhereBuilder()
+        wb.inbound_only().not_empty("endpoint").project(project_id).eq("module", module)
+        where_clause, params = wb.build()
 
         query = f"""
             SELECT DISTINCT endpoint
             FROM logs
-            WHERE {where_clause}
+            {where_clause}
             ORDER BY endpoint
         """
         result = client.query(query, parameters=params)

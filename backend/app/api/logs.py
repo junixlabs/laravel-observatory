@@ -7,72 +7,11 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from app.api.auth import verify_auth
 from app.models.log import LogEntry, PaginatedResponse
 from app.services.clickhouse import get_clickhouse_client
+from app.services.query_builder import WhereBuilder
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
-
-
-def build_where_clause(
-    project_id: Optional[str] = None,
-    status: Optional[str] = None,
-    endpoint: Optional[str] = None,
-    module: Optional[str] = None,
-    user: Optional[str] = None,
-    request_id: Optional[str] = None,
-    start_date: Optional[str] = None,
-    end_date: Optional[str] = None,
-) -> tuple[str, dict]:
-    """Build WHERE clause with parameterized conditions."""
-    conditions = []
-    params = {}
-
-    # Add project_id filter if provided
-    if project_id:
-        conditions.append("toString(project_id) = %(project_id)s")
-        params["project_id"] = project_id
-
-    if status:
-        if status == "2xx":
-            conditions.append("status_code >= 200 AND status_code < 300")
-        elif status == "3xx":
-            conditions.append("status_code >= 300 AND status_code < 400")
-        elif status == "4xx":
-            conditions.append("status_code >= 400 AND status_code < 500")
-        elif status == "5xx":
-            conditions.append("status_code >= 500")
-        elif status == "error":
-            conditions.append("status_code >= 400")
-        elif status == "success":
-            conditions.append("status_code >= 200 AND status_code < 400")
-
-    if endpoint:
-        conditions.append("endpoint LIKE %(endpoint)s")
-        params["endpoint"] = f"%{endpoint}%"
-
-    if module:
-        conditions.append("module = %(module)s")
-        params["module"] = module
-
-    if user:
-        conditions.append("(user_id = %(user)s OR user_name LIKE %(user_pattern)s)")
-        params["user"] = user
-        params["user_pattern"] = f"%{user}%"
-
-    if request_id:
-        conditions.append("request_id LIKE %(request_id)s")
-        params["request_id"] = f"%{request_id}%"
-
-    if start_date:
-        conditions.append("timestamp >= %(start_date)s")
-        params["start_date"] = start_date
-
-    if end_date:
-        conditions.append("timestamp <= %(end_date)s")
-        params["end_date"] = end_date
-
-    where_clause = " AND ".join(conditions) if conditions else "1=1"
-    return where_clause, params
 
 
 @router.get("/logs", response_model=PaginatedResponse)
@@ -93,17 +32,16 @@ async def get_logs(
     try:
         client = get_clickhouse_client()
 
-        # Build WHERE clause with parameterized queries
-        where_clause, params = build_where_clause(
-            project_id=project_id,
-            status=status,
-            endpoint=endpoint,
-            module=module,
-            user=user,
-            request_id=request_id,
-            start_date=start_date,
-            end_date=end_date,
-        )
+        # Build WHERE clause with WhereBuilder
+        wb = WhereBuilder()
+        wb.project(project_id)
+        wb.date_range(start_date, end_date)
+        wb.status_code(status)
+        wb.like("endpoint", endpoint)
+        wb.eq("module", module)
+        wb.user_search(user)
+        wb.like("request_id", request_id)
+        where_clause, params = wb.build_conditions()
         offset = (page - 1) * page_size
 
         # Get total count

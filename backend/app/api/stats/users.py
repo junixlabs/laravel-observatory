@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.api.auth import verify_auth
 from app.api.stats._common import safe_float
+from app.services.query_builder import WhereBuilder
 from app.models.stats import (
     UserActivityPoint,
     UserStats,
@@ -32,31 +33,11 @@ async def get_top_users(
     try:
         client = get_clickhouse_client()
 
-        # Build WHERE conditions with parameterized queries
-        params = {}
-        conditions = []
-
-        if project_id:
-            conditions.append("toString(project_id) = %(project_id)s")
-            params["project_id"] = project_id
-        if start_date:
-            conditions.append("timestamp >= parseDateTimeBestEffort(%(start_date)s)")
-            params["start_date"] = start_date
-        if end_date:
-            conditions.append("timestamp <= parseDateTimeBestEffort(%(end_date)s)")
-            params["end_date"] = end_date
-
-        # Add type filter
-        if type == "inbound":
-            conditions.append("is_outbound = 0")
-        elif type == "outbound":
-            conditions.append("is_outbound = 1")
-
-        # Filter out empty user_id and user_name
-        conditions.append("user_id != ''")
-        conditions.append("user_name != ''")
-
-        where_clause = "WHERE " + " AND ".join(conditions) if conditions else ""
+        # Build WHERE conditions
+        wb = WhereBuilder()
+        wb.project(project_id).date_range(start_date, end_date, best_effort=True).request_type(type)
+        wb.not_empty("user_id").not_empty("user_name")
+        where_clause, params = wb.build()
 
         # Add limit parameter to prevent SQL injection
         params["limit"] = limit
@@ -115,24 +96,11 @@ async def get_user_activity(
         }
         time_func = interval_map.get(interval, "toStartOfHour")
 
-        # Build WHERE conditions with parameterized queries
-        params = {}
-        conditions = []
-
-        conditions.append("user_id = %(user_id)s")
-        params["user_id"] = user_id
-
-        if project_id:
-            conditions.append("toString(project_id) = %(project_id)s")
-            params["project_id"] = project_id
-        if start_date:
-            conditions.append("timestamp >= parseDateTimeBestEffort(%(start_date)s)")
-            params["start_date"] = start_date
-        if end_date:
-            conditions.append("timestamp <= parseDateTimeBestEffort(%(end_date)s)")
-            params["end_date"] = end_date
-
-        where_clause = "WHERE " + " AND ".join(conditions) if conditions else ""
+        # Build WHERE conditions
+        wb = WhereBuilder()
+        wb.eq("user_id", user_id)
+        wb.project(project_id).date_range(start_date, end_date, best_effort=True)
+        where_clause, params = wb.build()
 
         query = f"""
             SELECT
@@ -174,25 +142,11 @@ async def get_users_with_errors(
     try:
         client = get_clickhouse_client()
 
-        # Build WHERE conditions with parameterized queries
-        params = {}
-        conditions = []
-
-        if project_id:
-            conditions.append("toString(project_id) = %(project_id)s")
-            params["project_id"] = project_id
-        if start_date:
-            conditions.append("timestamp >= parseDateTimeBestEffort(%(start_date)s)")
-            params["start_date"] = start_date
-        if end_date:
-            conditions.append("timestamp <= parseDateTimeBestEffort(%(end_date)s)")
-            params["end_date"] = end_date
-
-        # Filter out empty user_id and user_name
-        conditions.append("user_id != ''")
-        conditions.append("user_name != ''")
-
-        where_clause = "WHERE " + " AND ".join(conditions) if conditions else ""
+        # Build WHERE conditions
+        wb = WhereBuilder()
+        wb.project(project_id).date_range(start_date, end_date, best_effort=True)
+        wb.not_empty("user_id").not_empty("user_name")
+        where_clause, params = wb.build()
 
         # Add limit and min_requests parameters
         params["limit"] = limit

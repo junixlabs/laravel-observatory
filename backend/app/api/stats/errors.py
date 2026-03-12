@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.api.auth import verify_auth
 from app.api.stats._common import safe_float
+from app.services.query_builder import WhereBuilder
 from app.models.stats import (
     ErrorBreakdown,
     ErrorCategory,
@@ -53,29 +54,11 @@ async def get_error_breakdown(
     try:
         client = get_clickhouse_client()
 
-        # Build WHERE conditions with parameterized queries
-        params = {}
-        conditions = ["status_code >= 400"]
-
-        if project_id:
-            conditions.append("toString(project_id) = %(project_id)s")
-            params["project_id"] = project_id
-
-        if start_date:
-            conditions.append("timestamp >= parseDateTimeBestEffort(%(start_date)s)")
-            params["start_date"] = start_date
-
-        if end_date:
-            conditions.append("timestamp <= parseDateTimeBestEffort(%(end_date)s)")
-            params["end_date"] = end_date
-
-        # Add type filter
-        if type == "inbound":
-            conditions.append("is_outbound = 0")
-        elif type == "outbound":
-            conditions.append("is_outbound = 1")
-
-        where_clause = "WHERE " + " AND ".join(conditions)
+        # Build WHERE conditions
+        wb = WhereBuilder()
+        wb.raw("status_code >= 400")
+        wb.project(project_id).date_range(start_date, end_date, best_effort=True).request_type(type)
+        where_clause, params = wb.build()
 
         # Query for error counts by category
         category_query = f"""
@@ -155,29 +138,10 @@ async def get_error_endpoints(
     try:
         client = get_clickhouse_client()
 
-        # Build WHERE conditions with parameterized queries
-        params = {}
-        conditions = []
-
-        if project_id:
-            conditions.append("toString(project_id) = %(project_id)s")
-            params["project_id"] = project_id
-
-        if start_date:
-            conditions.append("timestamp >= parseDateTimeBestEffort(%(start_date)s)")
-            params["start_date"] = start_date
-
-        if end_date:
-            conditions.append("timestamp <= parseDateTimeBestEffort(%(end_date)s)")
-            params["end_date"] = end_date
-
-        # Add type filter
-        if type == "inbound":
-            conditions.append("is_outbound = 0")
-        elif type == "outbound":
-            conditions.append("is_outbound = 1")
-
-        where_clause = "WHERE " + " AND ".join(conditions) if conditions else ""
+        # Build WHERE conditions
+        wb = WhereBuilder()
+        wb.project(project_id).date_range(start_date, end_date, best_effort=True).request_type(type)
+        where_clause, params = wb.build()
 
         params["limit"] = limit
 
@@ -208,15 +172,12 @@ async def get_error_endpoints(
             error_rate = safe_float(row[4])
 
             # Get top errors for this endpoint
-            error_conditions = conditions.copy()
-            error_conditions.append("endpoint = %(endpoint_name)s")
-            error_conditions.append("method = %(method)s")
-            error_conditions.append("status_code >= 400")
-            error_where = "WHERE " + " AND ".join(error_conditions)
-
-            error_params = params.copy()
-            error_params["endpoint_name"] = endpoint_name
-            error_params["method"] = method
+            inner_wb = WhereBuilder()
+            inner_wb.project(project_id).date_range(start_date, end_date, best_effort=True).request_type(type)
+            inner_wb.eq("endpoint", endpoint_name, param_name="endpoint_name")
+            inner_wb.eq("method", method)
+            inner_wb.raw("status_code >= 400")
+            error_where, error_params = inner_wb.build()
 
             error_query = f"""
                 SELECT
@@ -273,29 +234,11 @@ async def get_error_timeline(
         }
         time_func = interval_map.get(interval, "toStartOfHour")
 
-        # Build WHERE conditions with parameterized queries
-        params = {}
-        conditions = ["status_code >= 400"]
-
-        if project_id:
-            conditions.append("toString(project_id) = %(project_id)s")
-            params["project_id"] = project_id
-
-        if start_date:
-            conditions.append("timestamp >= parseDateTimeBestEffort(%(start_date)s)")
-            params["start_date"] = start_date
-
-        if end_date:
-            conditions.append("timestamp <= parseDateTimeBestEffort(%(end_date)s)")
-            params["end_date"] = end_date
-
-        # Add type filter
-        if type == "inbound":
-            conditions.append("is_outbound = 0")
-        elif type == "outbound":
-            conditions.append("is_outbound = 1")
-
-        where_clause = "WHERE " + " AND ".join(conditions)
+        # Build WHERE conditions
+        wb = WhereBuilder()
+        wb.raw("status_code >= 400")
+        wb.project(project_id).date_range(start_date, end_date, best_effort=True).request_type(type)
+        where_clause, params = wb.build()
 
         query = f"""
             SELECT
