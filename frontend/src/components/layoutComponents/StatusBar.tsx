@@ -1,30 +1,24 @@
 import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { AlertTriangle, CheckCircle, RefreshCw } from 'lucide-react'
+import { useHealthAlerts } from '@/hooks/useHealthAlerts'
+import { useQueryClient } from '@tanstack/react-query'
 
 interface StatusBarProps {
   sidebarCollapsed: boolean
 }
 
-interface SystemStatus {
-  critical: number
-  warnings: number
-  lastUpdated: Date
-}
-
 export default function StatusBar({ sidebarCollapsed }: StatusBarProps) {
-  const [status, setStatus] = useState<SystemStatus>({
-    critical: 1,
-    warnings: 3,
-    lastUpdated: new Date(),
-  })
+  const { critical, warnings, lastUpdated, isLoading } = useHealthAlerts()
+  const queryClient = useQueryClient()
   const [timeSinceUpdate, setTimeSinceUpdate] = useState('just now')
 
   // Update time display
   useEffect(() => {
     const updateTimeDisplay = () => {
       const now = new Date()
-      const diff = Math.floor((now.getTime() - status.lastUpdated.getTime()) / 1000)
+      const diff = Math.floor((now.getTime() - lastUpdated.getTime()) / 1000)
 
       if (diff < 5) {
         setTimeSinceUpdate('just now')
@@ -40,24 +34,13 @@ export default function StatusBar({ sidebarCollapsed }: StatusBarProps) {
     updateTimeDisplay()
     const interval = setInterval(updateTimeDisplay, 1000)
     return () => clearInterval(interval)
-  }, [status.lastUpdated])
-
-  // Simulate periodic updates - replace with real data later
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setStatus((prev) => ({
-        ...prev,
-        lastUpdated: new Date(),
-      }))
-    }, 30000)
-    return () => clearInterval(interval)
-  }, [])
+  }, [lastUpdated])
 
   const handleRefresh = () => {
-    setStatus((prev) => ({
-      ...prev,
-      lastUpdated: new Date(),
-    }))
+    queryClient.invalidateQueries({ queryKey: ['stats'] })
+    queryClient.invalidateQueries({ queryKey: ['inboundStats'] })
+    queryClient.invalidateQueries({ queryKey: ['outboundStats'] })
+    queryClient.invalidateQueries({ queryKey: ['jobStats'] })
   }
 
   return (
@@ -77,7 +60,7 @@ export default function StatusBar({ sidebarCollapsed }: StatusBarProps) {
       {/* Left section - Status indicators */}
       <div className="flex items-center gap-4">
         {/* Critical alerts */}
-        {status.critical > 0 && (
+        {critical > 0 && (
           <button
             className="flex items-center gap-1.5 px-2 py-0.5 rounded transition-colors"
             style={{
@@ -86,12 +69,12 @@ export default function StatusBar({ sidebarCollapsed }: StatusBarProps) {
             }}
           >
             <AlertTriangle className="w-3.5 h-3.5" />
-            <span className="font-medium">{status.critical} Critical</span>
+            <span className="font-medium">{critical} Critical</span>
           </button>
         )}
 
         {/* Warnings */}
-        {status.warnings > 0 && (
+        {warnings > 0 && (
           <button
             className="flex items-center gap-1.5 px-2 py-0.5 rounded transition-colors"
             style={{
@@ -100,12 +83,12 @@ export default function StatusBar({ sidebarCollapsed }: StatusBarProps) {
             }}
           >
             <AlertTriangle className="w-3.5 h-3.5" />
-            <span className="font-medium">{status.warnings} Warnings</span>
+            <span className="font-medium">{warnings} Warning{warnings !== 1 ? 's' : ''}</span>
           </button>
         )}
 
         {/* All clear indicator */}
-        {status.critical === 0 && status.warnings === 0 && (
+        {critical === 0 && warnings === 0 && !isLoading && (
           <div
             className="flex items-center gap-1.5 px-2 py-0.5 rounded"
             style={{
@@ -135,7 +118,7 @@ export default function StatusBar({ sidebarCollapsed }: StatusBarProps) {
             className="p-1 rounded transition-colors hover:bg-gray-500/10"
             title="Refresh data"
           >
-            <RefreshCw className="w-3.5 h-3.5" />
+            <RefreshCw className={cn('w-3.5 h-3.5', isLoading && 'animate-spin')} />
           </button>
         </div>
 
@@ -146,7 +129,7 @@ export default function StatusBar({ sidebarCollapsed }: StatusBarProps) {
         />
 
         {/* Version */}
-        <span>SidMonitor v1.0.0</span>
+        <Link to="/whats-new" className="hover:underline">SidMonitor v0.3.0</Link>
       </div>
     </footer>
   )

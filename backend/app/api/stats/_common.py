@@ -35,10 +35,10 @@ def build_stats_where_clause(
         conditions.append("toString(project_id) = %(project_id)s")
         params["project_id"] = project_id
     if start_date:
-        conditions.append("timestamp >= %(start_date)s")
+        conditions.append("timestamp >= parseDateTimeBestEffort(%(start_date)s)")
         params["start_date"] = start_date
     if end_date:
-        conditions.append("timestamp <= %(end_date)s")
+        conditions.append("timestamp <= parseDateTimeBestEffort(%(end_date)s)")
         params["end_date"] = end_date
     if request_type == "inbound":
         conditions.append("is_outbound = 0")

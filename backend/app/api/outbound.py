@@ -230,11 +230,11 @@ def build_outbound_where_clause(
         params["trace_id"] = trace_id
 
     if start_date:
-        conditions.append("timestamp >= %(start_date)s")
+        conditions.append("timestamp >= parseDateTimeBestEffort(%(start_date)s)")
         params["start_date"] = start_date
 
     if end_date:
-        conditions.append("timestamp <= %(end_date)s")
+        conditions.append("timestamp <= parseDateTimeBestEffort(%(end_date)s)")
         params["end_date"] = end_date
 
     where_clause = " AND ".join(conditions) if conditions else "1=1"
@@ -509,18 +509,7 @@ async def get_outbound_log_by_id(
 # Stats Endpoints
 # ============================================
 
-def safe_float(value, default: float = 0.0) -> float:
-    """Convert value to float, handling NaN and None."""
-    if value is None:
-        return default
-    try:
-        f = float(value)
-        if math.isnan(f) or math.isinf(f):
-            return default
-        return f
-    except (TypeError, ValueError):
-        return default
-
+from app.api.stats._common import safe_float
 
 from app.models.outbound import (
     OutboundOverallStats,
@@ -549,11 +538,11 @@ async def get_outbound_stats(
             params["project_id"] = project_id
 
         if start_date:
-            conditions.append("timestamp >= %(start_date)s")
+            conditions.append("timestamp >= parseDateTimeBestEffort(%(start_date)s)")
             params["start_date"] = start_date
 
         if end_date:
-            conditions.append("timestamp <= %(end_date)s")
+            conditions.append("timestamp <= parseDateTimeBestEffort(%(end_date)s)")
             params["end_date"] = end_date
 
         where_clause = "WHERE " + " AND ".join(conditions) if conditions else ""
@@ -622,11 +611,11 @@ async def get_outbound_stats_by_service(
             params["project_id"] = project_id
 
         if start_date:
-            conditions.append("timestamp >= %(start_date)s")
+            conditions.append("timestamp >= parseDateTimeBestEffort(%(start_date)s)")
             params["start_date"] = start_date
 
         if end_date:
-            conditions.append("timestamp <= %(end_date)s")
+            conditions.append("timestamp <= parseDateTimeBestEffort(%(end_date)s)")
             params["end_date"] = end_date
 
         where_clause = "WHERE " + " AND ".join(conditions)
@@ -694,11 +683,11 @@ async def get_outbound_service_endpoints(
             params["project_id"] = project_id
 
         if start_date:
-            conditions.append("timestamp >= %(start_date)s")
+            conditions.append("timestamp >= parseDateTimeBestEffort(%(start_date)s)")
             params["start_date"] = start_date
 
         if end_date:
-            conditions.append("timestamp <= %(end_date)s")
+            conditions.append("timestamp <= parseDateTimeBestEffort(%(end_date)s)")
             params["end_date"] = end_date
 
         where_clause = "WHERE " + " AND ".join(conditions)
@@ -777,11 +766,11 @@ async def get_outbound_stats_by_host(
             params["project_id"] = project_id
 
         if start_date:
-            conditions.append("timestamp >= %(start_date)s")
+            conditions.append("timestamp >= parseDateTimeBestEffort(%(start_date)s)")
             params["start_date"] = start_date
 
         if end_date:
-            conditions.append("timestamp <= %(end_date)s")
+            conditions.append("timestamp <= parseDateTimeBestEffort(%(end_date)s)")
             params["end_date"] = end_date
 
         where_clause = "WHERE " + " AND ".join(conditions)

@@ -3,6 +3,10 @@
 from fastapi import APIRouter, Depends, Query
 from typing import Optional, List, Literal
 import logging
+import uuid as uuid_module
+
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.stats import (
     DashboardStats,
@@ -13,11 +17,22 @@ from app.models.stats import (
     ProjectStats,
     StatTrend,
 )
+from app.models.database import Project as ProjectModel
 from app.api.auth import verify_auth
 from app.services.clickhouse import get_clickhouse_client
 from app.api.stats._common import safe_float, build_stats_where_clause
+from app.database import get_db
 
 logger = logging.getLogger(__name__)
+
+
+def _is_valid_uuid(val: str) -> bool:
+    """Check if a string is a valid UUID."""
+    try:
+        uuid_module.UUID(val)
+        return True
+    except (ValueError, AttributeError):
+        return False
 
 router = APIRouter()
 
@@ -43,11 +58,11 @@ async def get_dashboard_stats(
             params["project_id"] = project_id
 
         if start_date:
-            conditions.append("timestamp >= %(start_date)s")
+            conditions.append("timestamp >= parseDateTimeBestEffort(%(start_date)s)")
             params["start_date"] = start_date
 
         if end_date:
-            conditions.append("timestamp <= %(end_date)s")
+            conditions.append("timestamp <= parseDateTimeBestEffort(%(end_date)s)")
             params["end_date"] = end_date
 
         # Add type filter
@@ -272,10 +287,10 @@ async def get_top_endpoints(
             conditions.append("toString(project_id) = %(project_id)s")
             params["project_id"] = project_id
         if start_date:
-            conditions.append("timestamp >= %(start_date)s")
+            conditions.append("timestamp >= parseDateTimeBestEffort(%(start_date)s)")
             params["start_date"] = start_date
         if end_date:
-            conditions.append("timestamp <= %(end_date)s")
+            conditions.append("timestamp <= parseDateTimeBestEffort(%(end_date)s)")
             params["end_date"] = end_date
 
         # Add type filter
@@ -343,11 +358,11 @@ async def get_request_counts(
             params["project_id"] = project_id
 
         if start_date:
-            conditions.append("timestamp >= %(start_date)s")
+            conditions.append("timestamp >= parseDateTimeBestEffort(%(start_date)s)")
             params["start_date"] = start_date
 
         if end_date:
-            conditions.append("timestamp <= %(end_date)s")
+            conditions.append("timestamp <= parseDateTimeBestEffort(%(end_date)s)")
             params["end_date"] = end_date
 
         where_clause = "WHERE " + " AND ".join(conditions) if conditions else ""
@@ -383,6 +398,7 @@ async def get_global_dashboard_stats(
     start_date: Optional[str] = Query(None),
     end_date: Optional[str] = Query(None),
     _: bool = Depends(verify_auth),
+    db: AsyncSession = Depends(get_db),
 ):
     """Get global dashboard statistics across all projects."""
     try:
@@ -393,11 +409,11 @@ async def get_global_dashboard_stats(
         conditions = []
 
         if start_date:
-            conditions.append("timestamp >= %(start_date)s")
+            conditions.append("timestamp >= parseDateTimeBestEffort(%(start_date)s)")
             params["start_date"] = start_date
 
         if end_date:
-            conditions.append("timestamp <= %(end_date)s")
+            conditions.append("timestamp <= parseDateTimeBestEffort(%(end_date)s)")
             params["end_date"] = end_date
 
         where_clause = "WHERE " + " AND ".join(conditions) if conditions else ""
@@ -416,6 +432,20 @@ async def get_global_dashboard_stats(
         """
 
         result = client.query(query, parameters=params)
+
+        # Resolve project names from PostgreSQL
+        project_ids = [str(row[0]) for row in result.result_rows]
+        project_name_map: dict[str, str] = {}
+        if project_ids:
+            valid_uuids = [uuid_module.UUID(pid) for pid in project_ids if _is_valid_uuid(pid)]
+            if valid_uuids:
+                pg_result = await db.execute(
+                    select(ProjectModel.id, ProjectModel.name).where(
+                        ProjectModel.id.in_(valid_uuids)
+                    )
+                )
+                for row_pg in pg_result.all():
+                    project_name_map[str(row_pg[0])] = row_pg[1]
 
         # Calculate health status based on error rate
         def get_health_status(error_rate: float) -> str:
@@ -438,9 +468,11 @@ async def get_global_dashboard_stats(
             total_requests_all += total_requests
             total_errors_all += int((error_rate / 100.0) * total_requests)
 
+            project_name = project_name_map.get(project_id, f"Project {project_id[:8]}")
+
             projects.append(ProjectStats(
                 project_id=project_id,
-                project_name=f"Project {project_id[:8]}",  # Simplified - could join with projects table
+                project_name=project_name,
                 total_requests=total_requests,
                 error_rate=error_rate,
                 avg_response_time=avg_response_time,

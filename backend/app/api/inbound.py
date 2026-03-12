@@ -18,26 +18,10 @@ from app.models.inbound import (
 )
 from app.services.clickhouse import get_clickhouse_client
 from app.api.auth import verify_auth
+from app.api.stats._common import safe_float
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
-
-
-# ============================================
-# Helper Functions
-# ============================================
-
-def safe_float(value, default: float = 0.0) -> float:
-    """Convert value to float, handling NaN and None."""
-    if value is None:
-        return default
-    try:
-        f = float(value)
-        if math.isnan(f) or math.isinf(f):
-            return default
-        return f
-    except (TypeError, ValueError):
-        return default
 
 
 def build_inbound_where_clause(
@@ -96,11 +80,11 @@ def build_inbound_where_clause(
         params["request_id"] = f"%{request_id}%"
 
     if start_date:
-        conditions.append("timestamp >= %(start_date)s")
+        conditions.append("timestamp >= parseDateTimeBestEffort(%(start_date)s)")
         params["start_date"] = start_date
 
     if end_date:
-        conditions.append("timestamp <= %(end_date)s")
+        conditions.append("timestamp <= parseDateTimeBestEffort(%(end_date)s)")
         params["end_date"] = end_date
 
     where_clause = " AND ".join(conditions)
@@ -130,11 +114,11 @@ async def get_inbound_stats(
             params["project_id"] = project_id
 
         if start_date:
-            conditions.append("timestamp >= %(start_date)s")
+            conditions.append("timestamp >= parseDateTimeBestEffort(%(start_date)s)")
             params["start_date"] = start_date
 
         if end_date:
-            conditions.append("timestamp <= %(end_date)s")
+            conditions.append("timestamp <= parseDateTimeBestEffort(%(end_date)s)")
             params["end_date"] = end_date
 
         where_clause = "WHERE " + " AND ".join(conditions)
@@ -197,11 +181,11 @@ async def get_inbound_stats_by_module(
             params["project_id"] = project_id
 
         if start_date:
-            conditions.append("timestamp >= %(start_date)s")
+            conditions.append("timestamp >= parseDateTimeBestEffort(%(start_date)s)")
             params["start_date"] = start_date
 
         if end_date:
-            conditions.append("timestamp <= %(end_date)s")
+            conditions.append("timestamp <= parseDateTimeBestEffort(%(end_date)s)")
             params["end_date"] = end_date
 
         where_clause = "WHERE " + " AND ".join(conditions)
@@ -269,11 +253,11 @@ async def get_inbound_module_endpoints(
             params["project_id"] = project_id
 
         if start_date:
-            conditions.append("timestamp >= %(start_date)s")
+            conditions.append("timestamp >= parseDateTimeBestEffort(%(start_date)s)")
             params["start_date"] = start_date
 
         if end_date:
-            conditions.append("timestamp <= %(end_date)s")
+            conditions.append("timestamp <= parseDateTimeBestEffort(%(end_date)s)")
             params["end_date"] = end_date
 
         where_clause = "WHERE " + " AND ".join(conditions)

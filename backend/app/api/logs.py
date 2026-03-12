@@ -63,11 +63,11 @@ def build_where_clause(
         params["request_id"] = f"%{request_id}%"
 
     if start_date:
-        conditions.append("timestamp >= %(start_date)s")
+        conditions.append("timestamp >= parseDateTimeBestEffort(%(start_date)s)")
         params["start_date"] = start_date
 
     if end_date:
-        conditions.append("timestamp <= %(end_date)s")
+        conditions.append("timestamp <= parseDateTimeBestEffort(%(end_date)s)")
         params["end_date"] = end_date
 
     where_clause = " AND ".join(conditions) if conditions else "1=1"

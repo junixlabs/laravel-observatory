@@ -46,10 +46,10 @@ async def get_service_health(
             additional_conditions += "AND toString(project_id) = %(project_id)s "
             params["project_id"] = project_id
         if start_date:
-            additional_conditions += "AND timestamp >= %(start_date)s "
+            additional_conditions += "AND timestamp >= parseDateTimeBestEffort(%(start_date)s) "
             params["start_date"] = start_date
         if end_date:
-            additional_conditions += "AND timestamp <= %(end_date)s "
+            additional_conditions += "AND timestamp <= parseDateTimeBestEffort(%(end_date)s) "
             params["end_date"] = end_date
 
         query = f"""
@@ -113,10 +113,10 @@ async def get_module_health(
             additional_conditions += "AND toString(project_id) = %(project_id)s "
             params["project_id"] = project_id
         if start_date:
-            additional_conditions += "AND timestamp >= %(start_date)s "
+            additional_conditions += "AND timestamp >= parseDateTimeBestEffort(%(start_date)s) "
             params["start_date"] = start_date
         if end_date:
-            additional_conditions += "AND timestamp <= %(end_date)s "
+            additional_conditions += "AND timestamp <= parseDateTimeBestEffort(%(end_date)s) "
             params["end_date"] = end_date
 
         query = f"""
@@ -176,11 +176,11 @@ async def get_performance_percentiles(
             params["project_id"] = project_id
 
         if start_date:
-            conditions.append("timestamp >= %(start_date)s")
+            conditions.append("timestamp >= parseDateTimeBestEffort(%(start_date)s)")
             params["start_date"] = start_date
 
         if end_date:
-            conditions.append("timestamp <= %(end_date)s")
+            conditions.append("timestamp <= parseDateTimeBestEffort(%(end_date)s)")
             params["end_date"] = end_date
 
         # Add type filter
@@ -257,11 +257,11 @@ async def get_slow_requests(
             params["project_id"] = project_id
 
         if start_date:
-            conditions.append("timestamp >= %(start_date)s")
+            conditions.append("timestamp >= parseDateTimeBestEffort(%(start_date)s)")
             params["start_date"] = start_date
 
         if end_date:
-            conditions.append("timestamp <= %(end_date)s")
+            conditions.append("timestamp <= parseDateTimeBestEffort(%(end_date)s)")
             params["end_date"] = end_date
 
         where_clause = "WHERE " + " AND ".join(conditions) if conditions else ""
