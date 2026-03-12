@@ -32,6 +32,7 @@ TTL toDateTime(started_at) + INTERVAL 90 DAY;
 CREATE TABLE IF NOT EXISTS sid_monitoring.scheduled_task_logs (
     id UUID DEFAULT generateUUIDv4(),
     project_id String,
+    timestamp DateTime64(3) DEFAULT now64(3),
     task_id String,
     command String,
     description String,
