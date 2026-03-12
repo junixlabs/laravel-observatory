@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { cn } from '@/lib/utils'
+import { APP_VERSION } from '@/utils/constants'
 import { AlertTriangle, CheckCircle, RefreshCw } from 'lucide-react'
 import { useHealthAlerts } from '@/hooks/useHealthAlerts'
 import { useQueryClient } from '@tanstack/react-query'
@@ -9,65 +10,50 @@ interface StatusBarProps {
   sidebarCollapsed: boolean
 }
 
+function formatTimeSince(date: Date): string {
+  const diff = Math.floor((Date.now() - date.getTime()) / 1000)
+  if (diff < 10) return 'just now'
+  if (diff < 60) return `${diff}s ago`
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`
+  return `${Math.floor(diff / 3600)}h ago`
+}
+
 export default function StatusBar({ sidebarCollapsed }: StatusBarProps) {
   const { critical, warnings, lastUpdated, isLoading } = useHealthAlerts()
   const queryClient = useQueryClient()
   const [timeSinceUpdate, setTimeSinceUpdate] = useState('just now')
 
-  // Update time display
+  // Update time display every 10s — sub-10s granularity not useful to users
   useEffect(() => {
-    const updateTimeDisplay = () => {
-      const now = new Date()
-      const diff = Math.floor((now.getTime() - lastUpdated.getTime()) / 1000)
-
-      if (diff < 5) {
-        setTimeSinceUpdate('just now')
-      } else if (diff < 60) {
-        setTimeSinceUpdate(`${diff}s ago`)
-      } else if (diff < 3600) {
-        setTimeSinceUpdate(`${Math.floor(diff / 60)}m ago`)
-      } else {
-        setTimeSinceUpdate(`${Math.floor(diff / 3600)}h ago`)
-      }
-    }
-
-    updateTimeDisplay()
-    const interval = setInterval(updateTimeDisplay, 1000)
+    setTimeSinceUpdate(formatTimeSince(lastUpdated))
+    const interval = setInterval(() => {
+      setTimeSinceUpdate(formatTimeSince(lastUpdated))
+    }, 10_000)
     return () => clearInterval(interval)
   }, [lastUpdated])
 
-  const handleRefresh = () => {
+  const handleRefresh = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['stats'] })
     queryClient.invalidateQueries({ queryKey: ['inboundStats'] })
     queryClient.invalidateQueries({ queryKey: ['outboundStats'] })
     queryClient.invalidateQueries({ queryKey: ['jobStats'] })
-  }
+  }, [queryClient])
 
   return (
     <footer
       className={cn(
         'fixed bottom-0 right-0 h-8 z-30',
         'flex items-center justify-between px-4',
-        'border-t text-xs transition-all duration-300'
+        'border-t border-border-primary text-xs transition-all duration-300',
+        'bg-surface text-text-muted'
       )}
-      style={{
-        left: sidebarCollapsed ? '64px' : '240px',
-        backgroundColor: 'var(--bg-primary)',
-        borderColor: 'var(--border-primary)',
-        color: 'var(--text-muted)',
-      }}
+      style={{ left: sidebarCollapsed ? '64px' : '240px' }}
     >
       {/* Left section - Status indicators */}
       <div className="flex items-center gap-4">
         {/* Critical alerts */}
         {critical > 0 && (
-          <button
-            className="flex items-center gap-1.5 px-2 py-0.5 rounded transition-colors"
-            style={{
-              backgroundColor: 'rgba(239, 68, 68, 0.1)',
-              color: 'var(--status-error)',
-            }}
-          >
+          <button className="flex items-center gap-1.5 px-2 py-0.5 rounded transition-colors bg-status-danger/10 text-status-danger">
             <AlertTriangle className="w-3.5 h-3.5" />
             <span className="font-medium">{critical} Critical</span>
           </button>
@@ -75,13 +61,7 @@ export default function StatusBar({ sidebarCollapsed }: StatusBarProps) {
 
         {/* Warnings */}
         {warnings > 0 && (
-          <button
-            className="flex items-center gap-1.5 px-2 py-0.5 rounded transition-colors"
-            style={{
-              backgroundColor: 'rgba(245, 158, 11, 0.1)',
-              color: 'var(--status-warning)',
-            }}
-          >
+          <button className="flex items-center gap-1.5 px-2 py-0.5 rounded transition-colors bg-status-warning/10 text-status-warning">
             <AlertTriangle className="w-3.5 h-3.5" />
             <span className="font-medium">{warnings} Warning{warnings !== 1 ? 's' : ''}</span>
           </button>
@@ -89,13 +69,7 @@ export default function StatusBar({ sidebarCollapsed }: StatusBarProps) {
 
         {/* All clear indicator */}
         {critical === 0 && warnings === 0 && !isLoading && (
-          <div
-            className="flex items-center gap-1.5 px-2 py-0.5 rounded"
-            style={{
-              backgroundColor: 'rgba(16, 185, 129, 0.1)',
-              color: 'var(--status-success)',
-            }}
-          >
+          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-status-success/10 text-status-success">
             <CheckCircle className="w-3.5 h-3.5" />
             <span className="font-medium">All Systems Operational</span>
           </div>
@@ -103,10 +77,7 @@ export default function StatusBar({ sidebarCollapsed }: StatusBarProps) {
       </div>
 
       {/* Center section - Separator */}
-      <div
-        className="h-4 w-px mx-4"
-        style={{ backgroundColor: 'var(--border-primary)' }}
-      />
+      <div className="h-4 w-px mx-4 bg-border-primary" />
 
       {/* Right section - Last updated & version */}
       <div className="flex items-center gap-4">
@@ -123,13 +94,10 @@ export default function StatusBar({ sidebarCollapsed }: StatusBarProps) {
         </div>
 
         {/* Separator */}
-        <div
-          className="h-4 w-px"
-          style={{ backgroundColor: 'var(--border-primary)' }}
-        />
+        <div className="h-4 w-px bg-border-primary" />
 
         {/* Version */}
-        <Link to="/whats-new" className="hover:underline">SidMonitor v0.3.0</Link>
+        <Link to="/whats-new" className="hover:underline">SidMonitor v{APP_VERSION}</Link>
       </div>
     </footer>
   )
