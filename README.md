@@ -1,323 +1,355 @@
-# SidMonitor
+# Laravel Observatory
 
-Application Performance Monitoring (APM) platform for Laravel applications. Track inbound/outbound API requests, background jobs, scheduled tasks, and application health in real-time.
+[![Latest Version on Packagist](https://img.shields.io/packagist/v/junixlabs/laravel-observatory.svg?style=flat-square)](https://packagist.org/packages/junixlabs/laravel-observatory)
+[![GitHub Tests Action Status](https://img.shields.io/github/actions/workflow/status/junixlabs/laravel-observatory/run-tests.yml?branch=main&label=tests&style=flat-square)](https://github.com/junixlabs/laravel-observatory/actions?query=workflow%3Arun-tests+branch%3Amain)
+[![Total Downloads](https://img.shields.io/packagist/dt/junixlabs/laravel-observatory.svg?style=flat-square)](https://packagist.org/packages/junixlabs/laravel-observatory)
+[![License](https://img.shields.io/packagist/l/junixlabs/laravel-observatory.svg?style=flat-square)](https://packagist.org/packages/junixlabs/laravel-observatory)
+[![PHP Version](https://img.shields.io/packagist/php-v/junixlabs/laravel-observatory.svg?style=flat-square)](https://packagist.org/packages/junixlabs/laravel-observatory)
+
+A comprehensive observability toolkit for Laravel applications. Monitor HTTP requests, outbound API calls, queue jobs, and exceptions with structured logging for Grafana/Loki and optional Prometheus metrics.
 
 ## Features
 
-- **Inbound API Monitoring** — Track all incoming HTTP requests with response times, status codes, and error rates by module/endpoint
-- **Outbound API Monitoring** — Monitor external API calls with latency, success rates, and service-level health breakdowns
-- **Background Job Tracking** — Monitor queue jobs with execution times, failure rates, retry counts, and exception details
-- **Scheduled Task Monitoring** — Track cron job executions with schedule adherence, duration, and failure detection
-- **Multi-Tenant Architecture** — Organizations, projects, and role-based access control with API key authentication
-- **Real-Time Dashboard** — Global overview across all projects, per-project dashboards with charts and analytics
-- **Advanced Analytics** — Error breakdowns, performance percentiles (P50/P95/P99), traffic patterns, and user activity
-- **Dark/Light Theme** — Full theme support with CSS custom properties and system preference detection
-- **Data Export** — Export logs and analytics as CSV or JSON
+- **Inbound Request Logging** - Automatically log all incoming HTTP requests
+- **Outbound HTTP Logging** - Log external API calls with service detection
+- **Queue Job Logging** - Track job execution with duration and memory usage
+- **Exception Logging** - Structured exception logging with stack traces
+- **Request ID Tracking** - Correlation IDs for distributed tracing
+- **Sensitive Data Masking** - Automatic masking of passwords, tokens, and PII
+- **Prometheus Metrics** - Optional metrics export with `/metrics` endpoint
+- **Zero Configuration** - Works out of the box with sensible defaults
+- **Grafana Dashboards** - Pre-built dashboard templates included
 
-## Tech Stack
+## Requirements
 
-| Layer | Technology |
-|-------|-----------|
-| Frontend | React 18, TypeScript, Vite, TailwindCSS, Recharts, React Query |
-| Backend | Python 3.11+, FastAPI, SQLAlchemy 2.0, Pydantic v2 |
-| Analytics DB | ClickHouse 23.8 (logs, metrics, materialized views) |
-| Metadata DB | PostgreSQL 15 (users, orgs, projects, API keys) |
-| Auth | JWT (python-jose) + bcrypt password hashing |
-| Client SDKs | Laravel (PHP) |
+- PHP 8.0+
+- Laravel 9.0, 10.0, 11.0, or 12.0
 
-## Architecture
+## Installation
 
-```
-┌─────────────────┐     ┌─────────────────┐     ┌──────────────┐
-│  Laravel App    │────▶│  FastAPI Backend │────▶│  ClickHouse  │
-│  (SDK)          │     │  :8030           │     │  (Analytics) │
-└─────────────────┘     │                  │     └──────────────┘
-                        │  /api/ingest     │     ┌──────────────┐
-                        │  /api/ingest/job │────▶│  PostgreSQL  │
-                        │  /api/ingest/task│     │  (Metadata)  │
-                        │                  │     └──────────────┘
-                        └────────┬─────────┘
-                                 │
-                        ┌────────▼─────────┐
-                        │  React Frontend  │
-                        │  :3030           │
-                        └──────────────────┘
+```bash
+composer require junixlabs/laravel-observatory
 ```
 
-**Data Flow:**
-1. Client SDKs send logs to the Ingest API (`/api/ingest`) with an API key
-2. Backend validates the key and writes raw logs to ClickHouse
-3. ClickHouse materialized views auto-aggregate hourly/daily statistics
-4. Frontend queries stats and log endpoints, scoped to the current project
+The package auto-registers and works immediately - no configuration needed!
 
 ## Quick Start
 
-### Prerequisites
+After installation, Observatory automatically:
+1. Logs all incoming HTTP requests to `storage/logs/observatory.log`
+2. Logs outbound HTTP calls via Laravel's HTTP client
+3. Logs queue job execution
+4. Logs exceptions with context
 
-- Node.js 18+
-- Python 3.11+
-- Docker & Docker Compose (for ClickHouse and PostgreSQL)
-
-### 1. Clone and Install
-
-```bash
-git clone <repository-url>
-cd monitoring
-make install
-```
-
-### 2. Start Databases
+### View Your Logs
 
 ```bash
-make clickhouse
+tail -f storage/logs/observatory.log | jq
 ```
 
-Starts PostgreSQL and ClickHouse via Docker Compose. ClickHouse init scripts in `clickhouse/init/` run automatically.
+## Configuration
 
-### 3. Configure Environment
+### Publish Config (Optional)
 
 ```bash
-cp backend/.env.example backend/.env
+php artisan vendor:publish --tag=observatory-config
 ```
-
-Required settings in `backend/.env`:
-
-```env
-DATABASE_URL=postgresql+asyncpg://sidmonitor:password@localhost:5432/sidmonitor
-CLICKHOUSE_HOST=localhost
-CLICKHOUSE_PORT=8123
-CLICKHOUSE_DATABASE=sid_monitoring
-JWT_SECRET_KEY=your-secret-key-change-this-in-production
-CORS_ORIGINS=http://localhost:3030
-PORT=8030
-```
-
-### 4. Run Database Migrations
-
-```bash
-cd backend
-alembic upgrade head
-```
-
-### 5. Start Development Servers
-
-```bash
-# Terminal 1 — Backend (http://localhost:8030)
-make dev-backend
-
-# Terminal 2 — Frontend (http://localhost:3030)
-make dev-frontend
-```
-
-### 6. Create Account
-
-1. Open http://localhost:3030/register
-2. Create your account
-3. Create an organization and project
-4. Copy the API key from Settings
-5. Install a client SDK in your application
-
-## Client SDK Integration
-
-### Laravel
-
-```bash
-composer require sid-stack/monitoring-laravel
-php artisan vendor:publish --tag=sid-monitoring-config
-```
-
-Add to your `.env`:
-
-```env
-SID_MONITORING_ENABLED=true
-SID_MONITORING_DSN=https://your-api-key@your-host/api/ingest
-SID_MONITORING_TRANSPORT=queue
-```
-
-The package automatically monitors inbound HTTP requests. For outbound monitoring, add the Guzzle middleware to your HTTP clients.
-
-## Project Structure
-
-```
-monitoring/
-├── backend/                    # FastAPI backend
-│   ├── app/
-│   │   ├── api/               # Route handlers
-│   │   │   ├── auth.py        # Authentication (register, login, profile)
-│   │   │   ├── ingest.py      # Log ingestion from SDKs
-│   │   │   ├── inbound.py     # Inbound API queries & stats
-│   │   │   ├── outbound.py    # Outbound API queries & stats
-│   │   │   ├── jobs.py        # Job monitoring endpoints
-│   │   │   ├── logs.py        # General log queries
-│   │   │   ├── organizations.py
-│   │   │   ├── projects.py
-│   │   │   ├── settings.py
-│   │   │   └── stats/         # Dashboard, traffic, performance, errors, users
-│   │   ├── models/            # Pydantic schemas & SQLAlchemy ORM
-│   │   ├── services/          # Business logic (ClickHouse, auth, ingest)
-│   │   ├── config.py          # Environment configuration
-│   │   ├── database.py        # SQLAlchemy async engine
-│   │   └── main.py            # FastAPI app & router setup
-│   ├── alembic/               # PostgreSQL migrations
-│   └── requirements.txt
-├── frontend/                   # React SPA
-│   ├── src/
-│   │   ├── pages/             # 12 route-level page components
-│   │   ├── components/        # UI, dashboard, inbound, outbound, jobs
-│   │   ├── contexts/          # AuthContext, ThemeContext
-│   │   ├── hooks/             # useLogs, useJobs, useInboundLogs, useOutboundLogs
-│   │   ├── api/client.ts      # Axios API client
-│   │   ├── types/index.ts     # TypeScript interfaces
-│   │   └── utils/             # Formatting, styling, export helpers
-│   ├── tailwind.config.js
-│   └── vite.config.ts
-├── clickhouse/init/            # ClickHouse schema (3 init scripts)
-├── packages/                   # Client SDKs
-│   └── laravel/               # Laravel monitoring package
-├── docker-compose.yml          # Production setup
-├── docker-compose.dev.yml      # Development databases
-├── Makefile                    # Development commands
-└── .github/workflows/          # CI/CD pipelines
-```
-
-## API Reference
-
-### Authentication
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/auth/register` | Register new user |
-| POST | `/api/auth/login` | Login (returns JWT) |
-| GET | `/api/auth/me` | Get current user profile |
-| PUT | `/api/auth/me` | Update profile |
-
-### Data Ingestion (API Key via `X-API-Key` header)
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/ingest` | Single log entry (inbound/outbound) |
-| POST | `/api/ingest/batch` | Batch log ingestion |
-| POST | `/api/v1/ingest/job` | Single job log |
-| POST | `/api/v1/ingest/jobs/batch` | Batch job logs |
-| POST | `/api/v1/ingest/task` | Single scheduled task log |
-| POST | `/api/v1/ingest/tasks/batch` | Batch task logs |
-
-### Monitoring Queries (JWT via `Authorization: Bearer` header)
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/logs` | General log query with filters |
-| GET | `/api/inbound` | Inbound API logs |
-| GET | `/api/inbound/stats` | Inbound stats |
-| GET | `/api/inbound/modules` | Module health breakdown |
-| GET | `/api/inbound/modules/{module}/endpoints` | Endpoints within a module |
-| GET | `/api/outbound` | Outbound API logs |
-| GET | `/api/outbound/stats` | Outbound stats |
-| GET | `/api/outbound/services` | Service health breakdown |
-| GET | `/api/outbound/services/{service}/endpoints` | Service endpoints |
-| GET | `/api/v1/jobs` | Job logs |
-| GET | `/api/v1/jobs/stats` | Job statistics |
-| GET | `/api/v1/scheduled-tasks` | Scheduled task logs |
-| GET | `/api/v1/scheduled-tasks/stats` | Task statistics |
-
-### Analytics (JWT Required)
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/stats/dashboard` | Overview stats |
-| GET | `/api/stats/dashboard/requests-timeline` | Request time series |
-| GET | `/api/stats/traffic/by-method` | Traffic by HTTP method |
-| GET | `/api/stats/traffic/peak-hours` | Peak request hours |
-| GET | `/api/stats/performance/percentiles` | P50/P95/P99 latencies |
-| GET | `/api/stats/performance/slow-endpoints` | Slowest endpoints |
-| GET | `/api/stats/errors/breakdown` | Error distribution (4xx/5xx) |
-| GET | `/api/stats/errors/by-endpoint` | Errors per endpoint |
-| GET | `/api/stats/users/top` | Most active users |
-
-### Multi-Tenancy (JWT Required)
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET/POST | `/api/organizations` | List/create organizations |
-| GET/POST | `/api/{org_slug}/projects` | List/create projects |
-| GET | `/api/projects/{id}/api-keys` | List API keys |
-| POST | `/api/projects/{id}/api-keys` | Create API key |
-| GET | `/api/projects/{id}/dsn` | Get DSN for SDK config |
-
-## Database Schema
-
-### PostgreSQL (Metadata)
-
-| Table | Description |
-|-------|-------------|
-| `users` | id, email, password_hash, name, avatar_url |
-| `organizations` | id, name, slug, owner_id, plan (free/pro/enterprise) |
-| `organization_members` | organization_id, user_id, role (owner/admin/member) |
-| `projects` | id, organization_id, name, slug, platform, environment, dsn_public_key |
-| `api_keys` | id, project_id, name, key_prefix, key_hash, scopes, revoked_at |
-| `invitations` | id, organization_id, email, role, token, expires_at |
-
-### ClickHouse (Analytics)
-
-| Table | Description |
-|-------|-------------|
-| `logs` | Inbound request logs (endpoint, method, status, response_time, module) |
-| `outbound_logs` | Outbound API calls (service, host, latency, status, trace) |
-| `job_logs` | Background jobs (class, queue, status, duration, exceptions) |
-| `scheduled_task_logs` | Cron tasks (command, expression, status, duration) |
-| `stats_hourly` | Materialized view: hourly aggregated request stats |
-| `outbound_stats_hourly` | Materialized view: hourly outbound stats |
-| `job_stats_hourly` | Materialized view: hourly job stats |
-| `scheduled_task_stats_daily` | Materialized view: daily task stats |
-
-All ClickHouse tables use monthly partitioning (`toYYYYMM()`) and 90-day TTL retention.
-
-## Available Commands
-
-```bash
-make help             # Show all available commands
-make install          # Install frontend + backend dependencies
-make dev              # Start databases + show dev instructions
-make dev-backend      # Start backend server (port 8030)
-make dev-frontend     # Start frontend dev server (port 3030)
-make clickhouse       # Start ClickHouse + PostgreSQL (Docker)
-make build            # Build frontend for production
-make docker-up        # Start all services (production)
-make docker-down      # Stop all services
-make clean            # Clean build artifacts
-```
-
-## Deployment
-
-### Docker (Production)
-
-```bash
-docker compose up -d
-```
-
-Starts all services: PostgreSQL, ClickHouse, backend (port 8000), frontend (port 3000).
-
-### CI/CD
-
-GitHub Actions workflows in `.github/workflows/`:
-
-- **ci.yml** — Runs on PR/push: lint, type-check, build for frontend and backend
-- **deploy.yml** — Runs on push to `main` or version tags: builds and pushes Docker images to `ghcr.io`
 
 ### Environment Variables
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `DATABASE_URL` | PostgreSQL async connection string | Required |
-| `CLICKHOUSE_HOST` | ClickHouse hostname | `localhost` |
-| `CLICKHOUSE_PORT` | ClickHouse HTTP port | `8123` |
-| `CLICKHOUSE_DATABASE` | ClickHouse database name | `sid_monitoring` |
-| `JWT_SECRET_KEY` | Secret for JWT token signing | Required |
-| `JWT_ACCESS_TOKEN_EXPIRE_MINUTES` | JWT token expiry | `30` |
-| `CORS_ORIGINS` | Allowed CORS origins (comma-separated) | `http://localhost:5173` |
-| `PORT` | Backend server port | `8000` |
-| `DEBUG` | Enable debug mode | `false` |
+All features are **enabled by default**. Only set these if you need to change defaults:
+
+```env
+# Disable Observatory entirely
+OBSERVATORY_ENABLED=false
+
+# Change log channel (default: 'observatory' -> storage/logs/observatory.log)
+# Use 'stderr' for Docker/K8s
+OBSERVATORY_LOG_CHANNEL=stderr
+
+# Disable specific loggers
+OBSERVATORY_INBOUND_ENABLED=false
+OBSERVATORY_OUTBOUND_ENABLED=false
+OBSERVATORY_JOBS_ENABLED=false
+OBSERVATORY_EXCEPTIONS_ENABLED=false
+
+# Log request/response bodies (disabled by default - can be large)
+OBSERVATORY_LOG_BODY=true
+
+# Only log slow requests (0 = log all)
+OBSERVATORY_SLOW_THRESHOLD_MS=1000
+```
+
+## Log Channel
+
+Observatory auto-registers the `observatory` log channel:
+- **File**: `storage/logs/observatory.log`
+- **Format**: JSON (Loki/ELK compatible)
+- **Rotation**: Daily, 14 days retention
+
+For Docker/Kubernetes, use stderr:
+```env
+OBSERVATORY_LOG_CHANNEL=stderr
+```
+
+## Custom Headers
+
+Extract custom headers into logs (multi-tenant, workspace, etc.):
+
+```php
+// config/observatory.php
+'inbound' => [
+    'custom_headers' => [
+        'X-Workspace-Id' => 'workspace_id',
+        'X-Tenant-Id' => 'tenant_id',
+        'X-Correlation-Id' => 'correlation_id',
+    ],
+],
+```
+
+Result in logs:
+```json
+{
+  "request_id": "abc-123",
+  "method": "POST",
+  "path": "/api/users",
+  "workspace_id": "ws-456",
+  "tenant_id": "tenant-789"
+}
+```
+
+## Service Detection
+
+Identify external services in outbound logs:
+
+```php
+// config/observatory.php
+'outbound' => [
+    'services' => [
+        '*.stripe.com' => 'stripe',
+        '*.amazonaws.com' => 'aws',
+        '*.sendgrid.com' => 'sendgrid',
+        'api.myservice.com' => 'my_service',
+    ],
+],
+```
+
+## Excluding Paths/Jobs
+
+```php
+// config/observatory.php
+'inbound' => [
+    'exclude_paths' => [
+        'telescope*',
+        'horizon*',
+        'health',
+        'metrics',
+    ],
+],
+
+'jobs' => [
+    'exclude_jobs' => [
+        'App\Jobs\InternalHealthCheck',
+    ],
+],
+```
+
+## Structured Log Examples
+
+### Inbound Request
+
+```json
+{
+  "message": "HTTP_REQUEST",
+  "context": {
+    "request_id": "550e8400-e29b-41d4-a716-446655440000",
+    "type": "inbound",
+    "method": "POST",
+    "url": "https://example.com/api/v1/orders",
+    "path": "api/v1/orders",
+    "route": "orders.store",
+    "status_code": 201,
+    "duration_ms": 145.23,
+    "ip": "192.168.1.1",
+    "user_agent": "Mozilla/5.0...",
+    "user_id": 123,
+    "memory_mb": 45.2,
+    "environment": "production"
+  }
+}
+```
+
+### Outbound Request
+
+```json
+{
+  "message": "HTTP_OUTBOUND",
+  "context": {
+    "request_id": "550e8400-e29b-41d4-a716-446655440000",
+    "type": "outbound",
+    "service": "stripe",
+    "method": "POST",
+    "url": "https://api.stripe.com/v1/charges",
+    "host": "api.stripe.com",
+    "status_code": 200,
+    "duration_ms": 523.45,
+    "environment": "production"
+  }
+}
+```
+
+### Job Processed
+
+```json
+{
+  "message": "JOB_PROCESSED",
+  "context": {
+    "job_id": "123",
+    "job_name": "App\\Jobs\\ProcessOrder",
+    "queue": "orders",
+    "status": "processed",
+    "duration_ms": 1234.56,
+    "attempts": 1,
+    "memory": {
+      "used_mb": 12.5,
+      "peak_mb": 45.2
+    },
+    "environment": "production"
+  }
+}
+```
+
+### Exception
+
+```json
+{
+  "message": "EXCEPTION",
+  "context": {
+    "request_id": "550e8400-e29b-41d4-a716-446655440000",
+    "exception_class": "App\\Exceptions\\PaymentException",
+    "message": "Payment declined",
+    "code": 402,
+    "file": "/app/Services/PaymentService.php",
+    "line": 145,
+    "request": {
+      "method": "POST",
+      "url": "https://example.com/api/orders",
+      "path": "api/orders"
+    },
+    "user": {
+      "id": 123
+    },
+    "trace": [...],
+    "environment": "production"
+  }
+}
+```
+
+## Prometheus Metrics (Optional)
+
+Enable Prometheus metrics endpoint:
+
+```env
+OBSERVATORY_PROMETHEUS_ENABLED=true
+OBSERVATORY_PROMETHEUS_STORAGE=apcu  # or 'redis', 'memory'
+```
+
+Visit `http://your-app.test/metrics` to see metrics.
+
+### Available Metrics
+
+| Metric | Type | Description |
+|--------|------|-------------|
+| `{app}_http_requests_total` | Counter | Total HTTP requests |
+| `{app}_http_request_duration_seconds` | Histogram | Request latency |
+| `{app}_http_outbound_requests_total` | Counter | Outbound HTTP requests |
+| `{app}_jobs_processed_total` | Counter | Queue jobs processed |
+| `{app}_exceptions_total` | Counter | Exceptions count |
+
+### Prometheus Auth
+
+```env
+OBSERVATORY_METRICS_AUTH=true
+OBSERVATORY_METRICS_USER=prometheus
+OBSERVATORY_METRICS_PASS=secret
+```
+
+## Grafana Integration
+
+### Docker Setup
+
+A complete Docker setup is included in `.tests/` directory:
+
+```bash
+cd .tests
+echo "LARAVEL_LOGS_PATH=/path/to/your/laravel/storage/logs" > .env
+docker-compose up -d
+```
+
+| Service | URL | Credentials |
+|---------|-----|-------------|
+| Grafana | http://localhost:3000 | admin / admin |
+| Prometheus | http://localhost:9090 | - |
+| Loki | http://localhost:3100 | - |
+
+### Pre-built Dashboards
+
+Import dashboards from `dashboards/` directory:
+
+| Dashboard | Data Source | Description |
+|-----------|-------------|-------------|
+| `observatory-dashboard.json` | Loki | Request logs, user analytics, exceptions |
+| `prometheus-dashboard.json` | Prometheus | Metrics overview, latency percentiles |
+
+### LogQL Query Examples
+
+```logql
+# All requests
+{job="laravel-observatory"} | json | message="HTTP_REQUEST"
+
+# Errors only
+{job="laravel-observatory"} | json | status_code >= 400
+
+# By user
+{job="laravel-observatory"} | json | user_id="123"
+
+# Slow requests (>1s)
+{job="laravel-observatory"} | json | duration_ms > 1000
+
+# External service calls
+{job="laravel-observatory"} | json | type="outbound" | service="stripe"
+
+# Exceptions
+{job="laravel-observatory"} | json | message="EXCEPTION"
+```
+
+## Kubernetes Deployment
+
+See [k8s/README.md](k8s/README.md) for Kubernetes deployment with Loki stack.
+
+## Testing
+
+```bash
+composer test
+```
+
+## Changelog
+
+See [CHANGELOG](CHANGELOG.md) for recent changes.
+
+## Contributing
+
+See [CONTRIBUTING](CONTRIBUTING.md) for details.
+
+## Security
+
+Report security issues to chuongld@canawan.com instead of the issue tracker.
+
+## Credits
+
+- [JunixLabs](https://github.com/junixlabs)
+- [All Contributors](../../contributors)
 
 ## License
 
-Proprietary. All rights reserved.
+MIT License. See [LICENSE](LICENSE) for details.
