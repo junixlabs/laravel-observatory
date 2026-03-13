@@ -27,7 +27,7 @@ class LogEntry(BaseModel):
 
 class PaginatedResponse(BaseModel):
     """Paginated response wrapper for list endpoints."""
-    data: list = Field(..., description="List of items in the current page")
+    data: list[LogEntry] = Field(..., description="List of log entries in the current page")
     total: int = Field(..., description="Total number of matching records")
     page: int = Field(..., description="Current page number (1-based)")
     page_size: int = Field(..., description="Number of records per page")

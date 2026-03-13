@@ -222,7 +222,7 @@ class PeakHourStats(BaseModel):
 
 class TrafficByDay(BaseModel):
     """Traffic statistics for a specific day of the week."""
-    day_of_week: int = Field(..., description="Day of the week (1=Monday, 7=Sunday)")
+    day_of_week: int = Field(..., description="Day of the week (0=Sunday, 6=Saturday)")
     day_name: str = Field(..., description="Day name (e.g., 'Monday')")
     avg_requests: float = Field(..., description="Average number of requests on this day")
     peak_requests: int = Field(..., description="Maximum number of requests recorded on this day")
