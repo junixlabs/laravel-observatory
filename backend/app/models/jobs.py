@@ -112,7 +112,7 @@ class RecentFailure(BaseModel):
     job_id: str = Field(..., description="Failed job identifier")
     job_class: str = Field(..., description="Failed job class name")
     timestamp: str = Field(..., description="Failure timestamp (YYYY-MM-DD HH:MM:SS)")
-    exception_message: str = Field(..., description="Exception message")
+    exception_message: Optional[str] = Field(None, description="Exception message")
 
 
 class JobHealthStats(BaseModel):
@@ -161,11 +161,11 @@ class ScheduledTaskExecution(BaseModel):
     completed_at: Optional[str] = Field(None, description="Completion time, null if not completed")
     duration_ms: Optional[int] = Field(None, description="Execution duration in milliseconds")
     exit_code: Optional[int] = Field(None, description="Command exit code (0 = success)")
-    output: str = Field(..., description="Command stdout output (may be truncated)")
-    error_message: str = Field(..., description="Error message on failure")
-    error_trace: str = Field(..., description="Error stack trace on failure")
+    output: Optional[str] = Field(None, description="Command stdout output (may be truncated)")
+    error_message: Optional[str] = Field(None, description="Error message on failure")
+    error_trace: Optional[str] = Field(None, description="Error stack trace on failure")
     without_overlapping: bool = Field(..., description="Whether overlap prevention is enabled")
-    mutex_name: str = Field(..., description="Mutex name for overlap prevention")
+    mutex_name: Optional[str] = Field(None, description="Mutex name for overlap prevention")
     expected_run_time: str = Field(..., description="Expected run time based on cron schedule")
     delay_ms: Optional[int] = Field(None, description="Delay from expected run time in milliseconds")
 
@@ -185,7 +185,7 @@ class ScheduledTaskFailure(BaseModel):
     task_id: str = Field(..., description="Failed task identifier")
     command: str = Field(..., description="Failed command signature")
     timestamp: str = Field(..., description="Failure timestamp (YYYY-MM-DD HH:MM:SS)")
-    error_message: str = Field(..., description="Error message")
+    error_message: Optional[str] = Field(None, description="Error message")
 
 
 class MissedTask(BaseModel):
@@ -194,6 +194,24 @@ class MissedTask(BaseModel):
     command: str = Field(..., description="Missed command signature")
     scheduled_at: str = Field(..., description="When the task was supposed to run")
     delay_ms: int = Field(..., description="How late the task was in milliseconds")
+
+
+class JobPaginatedResponse(BaseModel):
+    """Paginated response for job executions."""
+    data: list[JobExecution] = Field(..., description="List of job executions in the current page")
+    total: int = Field(..., description="Total number of matching records")
+    page: int = Field(..., description="Current page number (1-based)")
+    page_size: int = Field(..., description="Number of records per page")
+    total_pages: int = Field(..., description="Total number of pages")
+
+
+class ScheduledTaskPaginatedResponse(BaseModel):
+    """Paginated response for scheduled task executions."""
+    data: list[ScheduledTaskExecution] = Field(..., description="List of scheduled task executions in the current page")
+    total: int = Field(..., description="Total number of matching records")
+    page: int = Field(..., description="Current page number (1-based)")
+    page_size: int = Field(..., description="Number of records per page")
+    total_pages: int = Field(..., description="Total number of pages")
 
 
 class ScheduledTaskHealthStats(BaseModel):

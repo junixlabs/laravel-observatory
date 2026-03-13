@@ -9,6 +9,7 @@ from app.models.jobs import (
     JobClassStats,
     JobExecution,
     JobHealthStats,
+    JobPaginatedResponse,
     JobQueueStats,
     JobTimelinePoint,
     MissedTask,
@@ -17,8 +18,8 @@ from app.models.jobs import (
     ScheduledTaskExecution,
     ScheduledTaskFailure,
     ScheduledTaskHealthStats,
+    ScheduledTaskPaginatedResponse,
 )
-from app.models.log import PaginatedResponse
 from app.services.clickhouse import get_clickhouse_client
 from app.services.query_builder import WhereBuilder
 
@@ -38,7 +39,7 @@ def parse_timeframe(timeframe: str) -> str:
     return mapping.get(timeframe, "INTERVAL 24 HOUR")
 
 
-@router.get("/jobs", response_model=PaginatedResponse)
+@router.get("/jobs", response_model=JobPaginatedResponse)
 async def get_jobs(
     project_id: str = Query(..., description="Filter by project ID (UUID)"),
     queue_name: Optional[str] = Query(None, description="Filter by queue name"),
@@ -126,7 +127,7 @@ async def get_jobs(
                 memory_usage_mb=row[19],
             ))
 
-        return PaginatedResponse(
+        return JobPaginatedResponse(
             data=jobs,
             total=total,
             page=page,
@@ -362,7 +363,7 @@ async def get_job_timeline(
         raise HTTPException(status_code=500, detail="Error fetching job timeline")
 
 
-@router.get("/scheduled-tasks", response_model=PaginatedResponse)
+@router.get("/scheduled-tasks", response_model=ScheduledTaskPaginatedResponse)
 async def get_scheduled_tasks(
     project_id: str = Query(..., description="Filter by project ID (UUID)"),
     command: Optional[str] = Query(None, description="Filter by command"),
@@ -449,7 +450,7 @@ async def get_scheduled_tasks(
                 delay_ms=row[19],
             ))
 
-        return PaginatedResponse(
+        return ScheduledTaskPaginatedResponse(
             data=tasks,
             total=total,
             page=page,
