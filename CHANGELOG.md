@@ -7,6 +7,56 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-03-19
+
+### Added
+- **Scheduled Task Monitoring** - Full lifecycle tracking for Laravel scheduled tasks
+  - New `ScheduledTaskCollector` hooks into `ScheduledTaskStarting`, `ScheduledTaskFinished`, `ScheduledTaskFailed`, `ScheduledTaskSkipped` events
+  - New `ScheduledTaskLogger` writes structured JSON logs (`SCHEDULED_TASK` message) with timing, memory, and exit code
+  - Supports task output capture via `log_output` and `max_output_size` config
+  - Supports command exclusion with wildcards and slow threshold filtering
+  - New config section: `observatory.scheduled_tasks.*`
+- **SidMonitor Exporter** - Full push-based exporter implementation (replaces previous stub)
+  - Batch ingestion with separate buffers per data type (inbound, outbound, jobs, scheduled tasks)
+  - Two API endpoints: `POST /api/ingest/batch` (HTTP logs), `POST /api/ingest/jobs/batch` (jobs + tasks)
+  - `X-API-Key` authentication
+  - Auto-flush on batch size threshold or time interval
+  - Field mappings compatible with SidMonitor backend schema
+  - New config section: `observatory.sidmonitor.*` (endpoint, api_key, timeout, batch settings)
+- **Circuit Breaker** for SidMonitor exporter resilience
+  - After N consecutive flush failures, pause sending for M seconds (half-open retry after cooldown)
+  - Automatic buffer trimming when circuit is open to prevent unbounded memory growth
+  - New config section: `observatory.circuit_breaker.*` (threshold default: 3, cooldown default: 30s)
+- **Outbound Event-based Fallback** for Laravel < 10.14
+  - Listens to `RequestSending`, `ResponseReceived`, `ConnectionFailed` events when `Http::globalMiddleware()` is unavailable
+  - Previously silently ignored — now provides full outbound monitoring on older Laravel versions
+  - New methods: `OutboundCollector::recordFromEvent()`, `OutboundRequestLogger::logFromEvent()`
+  - Uses `spl_object_id()` keyed timing map with stale entry eviction (>5 min) for long-running processes
+- **Shutdown Hook** - `app->terminating()` callback to flush SidMonitor buffer after response is sent
+- **Scheduled Tasks Prometheus Metric** - New `{app}_scheduled_tasks_total` counter (labels: `command`, `status`)
+- `Observatory::scheduledTasks()` method and `@method` Facade annotation
+- `ExporterInterface::recordScheduledTask(array $data)` method
+
+### Changed
+- **Concurrent Request Safety** - `InboundCollector` and `InboundRequestLogger` now use `spl_object_id($request)` keyed arrays instead of single `$startTime`/`$startMemory` properties, fixing timing data corruption under concurrent requests (Octane, Swoole)
+- **Outbound Collector Enhancements**
+  - Added `parent_request_id` for correlation to parent inbound request
+  - Added `request_size` and `response_size` fields
+  - Added `error_message` and `error_code` for non-2xx responses
+  - `shouldMonitor()` check moved before timer start in Guzzle middleware
+  - Config values cached in constructor to avoid repeated `config()` lookups
+- **Exception Handler Hardening** - Observatory logging and metrics recording now each wrapped in separate try/catch blocks to never suppress original exception reporting
+- **SidMonitor env vars renamed** - `OBSERVATORY_SIDMONITOR_*` prefix changed to `SIDMONITOR_*` (e.g. `SIDMONITOR_ENDPOINT`, `SIDMONITOR_API_KEY`, `SIDMONITOR_BATCH_SIZE`)
+- **App name config** - `OBSERVATORY_APP_NAME` env var replaced with standard Laravel `APP_NAME`
+
+### Removed
+- `sidmonitor.project_id` config option — authentication now uses API key only
+- SidMonitor exporter stub/placeholder messages ("Coming soon", "planned features")
+
+### Breaking Changes
+- `ExporterInterface` has a new required method `recordScheduledTask(array $data): void` — custom exporter implementations must add this method
+- SidMonitor env var prefix changed from `OBSERVATORY_SIDMONITOR_*` to `SIDMONITOR_*` — update `.env` files if upgrading
+
 ## [1.3.3] - 2026-01-18
 
 ### Fixed

@@ -19,7 +19,7 @@ class RequestIdMiddleware
             return $next($request);
         }
 
-        $headerName = config('observatory.request_id.header_name', 'X-Request-Id');
+        $headerName = config('observatory.request_id.header', 'X-Request-Id');
 
         // Extract or generate request ID
         $requestId = $request->header($headerName);

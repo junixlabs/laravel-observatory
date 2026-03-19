@@ -182,6 +182,13 @@ return [
 
         // Log job payload (disabled by default - can be large)
         'log_payload' => env('OBSERVATORY_JOB_LOG_PAYLOAD', false),
+
+        // Include memory usage in job logs
+        'log_memory' => true,
+
+        // Include stack trace for failed jobs
+        'log_stack_trace' => false,
+        'max_stack_frames' => 10,
     ],
 
     /*
@@ -213,7 +220,7 @@ return [
     'exceptions' => [
         'enabled' => env('OBSERVATORY_EXCEPTIONS_ENABLED', true),
 
-        // Exceptions to ignore
+        // Exceptions to ignore (by class)
         'ignore' => [
             Illuminate\Auth\AuthenticationException::class,
             Illuminate\Auth\Access\AuthorizationException::class,
@@ -221,9 +228,29 @@ return [
             Illuminate\Validation\ValidationException::class,
         ],
 
+        // Exceptions to ignore (by class name pattern, supports wildcards)
+        'ignore_patterns' => [
+            // 'App\Exceptions\Internal*',
+        ],
+
         // Include stack trace
         'log_stack_trace' => true,
         'max_stack_frames' => 20,
+
+        // Include request context in exception logs
+        'log_request_context' => true,
+        'log_request_headers' => false,
+        'log_request_body' => false,
+
+        // Include user context
+        'log_user' => true,
+
+        // Include memory usage
+        'log_memory' => true,
+
+        // Include previous exception chain
+        'log_previous' => true,
+        'max_previous_depth' => 3,
     ],
 
     /*
@@ -234,6 +261,9 @@ return [
     'request_id' => [
         'enabled' => true,
         'header' => 'X-Request-Id',
+        'generate_if_missing' => true,
+        'include_in_response' => true,
+        'include_in_log_context' => true,
     ],
 
     /*

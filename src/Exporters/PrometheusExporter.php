@@ -50,6 +50,12 @@ class PrometheusExporter implements ExporterInterface
             return true;
         }
 
+        if (! class_exists(CollectorRegistry::class)) {
+            $this->enabled = false;
+
+            return false;
+        }
+
         $this->namespace = $this->sanitizeNamespace(config('observatory.app_name', 'laravel'));
         $this->registry = new CollectorRegistry($this->createStorage());
         $this->registerDefaultMetrics();

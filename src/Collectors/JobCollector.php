@@ -49,10 +49,9 @@ class JobCollector
         ];
 
         // Add payload if configured
-        if (config('observatory.jobs.record_payload', false)) {
-            $maxSize = config('observatory.jobs.max_payload_size', 64000);
+        if (config('observatory.jobs.log_payload', false)) {
             $payload = json_encode($job->payload());
-            $data['payload'] = strlen($payload) > $maxSize ? substr($payload, 0, $maxSize) : $payload;
+            $data['payload'] = strlen($payload) > 64000 ? substr($payload, 0, 64000) : $payload;
         }
 
         // Add exception info if job failed

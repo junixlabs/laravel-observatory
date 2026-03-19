@@ -6,17 +6,19 @@
 [![License](https://img.shields.io/packagist/l/junixlabs/laravel-observatory.svg?style=flat-square)](https://packagist.org/packages/junixlabs/laravel-observatory)
 [![PHP Version](https://img.shields.io/packagist/php-v/junixlabs/laravel-observatory.svg?style=flat-square)](https://packagist.org/packages/junixlabs/laravel-observatory)
 
-A comprehensive observability toolkit for Laravel applications. Monitor HTTP requests, outbound API calls, queue jobs, and exceptions with structured logging for Grafana/Loki and optional Prometheus metrics.
+A comprehensive observability toolkit for Laravel applications. Monitor HTTP requests, outbound API calls, queue jobs, scheduled tasks, and exceptions with structured logging and optional Prometheus or SidMonitor metrics.
 
 ## Features
 
 - **Inbound Request Logging** - Automatically log all incoming HTTP requests
 - **Outbound HTTP Logging** - Log external API calls with service detection
 - **Queue Job Logging** - Track job execution with duration and memory usage
+- **Scheduled Task Logging** - Monitor artisan scheduled tasks lifecycle (start, finish, fail, skip)
 - **Exception Logging** - Structured exception logging with stack traces
 - **Request ID Tracking** - Correlation IDs for distributed tracing
 - **Sensitive Data Masking** - Automatic masking of passwords, tokens, and PII
-- **Prometheus Metrics** - Optional metrics export with `/metrics` endpoint
+- **Dual Exporter Support** - Choose between Prometheus (pull) or SidMonitor (push) metrics
+- **Circuit Breaker** - Resilient push-based exporting with automatic backoff
 - **Zero Configuration** - Works out of the box with sensible defaults
 - **Grafana Dashboards** - Pre-built dashboard templates included
 
@@ -39,7 +41,8 @@ After installation, Observatory automatically:
 1. Logs all incoming HTTP requests to `storage/logs/observatory.log`
 2. Logs outbound HTTP calls via Laravel's HTTP client
 3. Logs queue job execution
-4. Logs exceptions with context
+4. Logs scheduled task execution
+5. Logs exceptions with context
 
 ### View Your Logs
 
@@ -71,6 +74,7 @@ OBSERVATORY_LOG_CHANNEL=stderr
 OBSERVATORY_INBOUND_ENABLED=false
 OBSERVATORY_OUTBOUND_ENABLED=false
 OBSERVATORY_JOBS_ENABLED=false
+OBSERVATORY_SCHEDULED_TASKS_ENABLED=false
 OBSERVATORY_EXCEPTIONS_ENABLED=false
 
 # Log request/response bodies (disabled by default - can be large)
@@ -78,6 +82,40 @@ OBSERVATORY_LOG_BODY=true
 
 # Only log slow requests (0 = log all)
 OBSERVATORY_SLOW_THRESHOLD_MS=1000
+```
+
+## Exporters
+
+Observatory supports two metrics exporters. Set via `OBSERVATORY_EXPORTER` env var.
+
+### Prometheus (default, pull-based)
+
+```env
+OBSERVATORY_EXPORTER=prometheus
+OBSERVATORY_PROMETHEUS_ENABLED=true
+OBSERVATORY_PROMETHEUS_STORAGE=apcu  # or 'redis', 'memory'
+```
+
+Exposes a `/metrics` endpoint scraped by Prometheus.
+
+### SidMonitor (push-based)
+
+```env
+OBSERVATORY_EXPORTER=sidmonitor
+SIDMONITOR_ENDPOINT=https://api.sidmonitor.com
+SIDMONITOR_API_KEY=your-api-key
+```
+
+Buffers data in-memory and flushes in batches to the SidMonitor backend. Includes a circuit breaker that pauses sending after consecutive failures to avoid blocking your application.
+
+```env
+# Batch settings
+SIDMONITOR_BATCH_SIZE=100
+SIDMONITOR_BATCH_INTERVAL=10
+
+# Circuit breaker
+SIDMONITOR_CIRCUIT_BREAKER_THRESHOLD=3   # failures before opening
+SIDMONITOR_CIRCUIT_BREAKER_COOLDOWN=30   # seconds before retry
 ```
 
 ## Log Channel
@@ -134,7 +172,7 @@ Identify external services in outbound logs:
 ],
 ```
 
-## Excluding Paths/Jobs
+## Excluding Paths/Jobs/Tasks
 
 ```php
 // config/observatory.php
@@ -150,6 +188,12 @@ Identify external services in outbound logs:
 'jobs' => [
     'exclude_jobs' => [
         'App\Jobs\InternalHealthCheck',
+    ],
+],
+
+'scheduled_tasks' => [
+    'exclude_commands' => [
+        'schedule:run',
     ],
 ],
 ```
@@ -219,6 +263,27 @@ Identify external services in outbound logs:
 }
 ```
 
+### Scheduled Task
+
+```json
+{
+  "message": "SCHEDULED_TASK",
+  "context": {
+    "command": "reports:generate",
+    "description": "Generate daily reports",
+    "expression": "0 2 * * *",
+    "status": "completed",
+    "duration_ms": 4523.12,
+    "exit_code": 0,
+    "memory": {
+      "used_mb": 32.1,
+      "peak_mb": 64.5
+    },
+    "environment": "production"
+  }
+}
+```
+
 ### Exception
 
 ```json
@@ -239,15 +304,13 @@ Identify external services in outbound logs:
     "user": {
       "id": 123
     },
-    "trace": [...],
+    "trace": ["..."],
     "environment": "production"
   }
 }
 ```
 
 ## Prometheus Metrics (Optional)
-
-Enable Prometheus metrics endpoint:
 
 ```env
 OBSERVATORY_PROMETHEUS_ENABLED=true
@@ -264,6 +327,7 @@ Visit `http://your-app.test/metrics` to see metrics.
 | `{app}_http_request_duration_seconds` | Histogram | Request latency |
 | `{app}_http_outbound_requests_total` | Counter | Outbound HTTP requests |
 | `{app}_jobs_processed_total` | Counter | Queue jobs processed |
+| `{app}_scheduled_tasks_total` | Counter | Scheduled tasks executed |
 | `{app}_exceptions_total` | Counter | Exceptions count |
 
 ### Prometheus Auth
@@ -274,27 +338,9 @@ OBSERVATORY_METRICS_USER=prometheus
 OBSERVATORY_METRICS_PASS=secret
 ```
 
-## Grafana Integration
+## Grafana Dashboards
 
-### Docker Setup
-
-A complete Docker setup is included in `.tests/` directory:
-
-```bash
-cd .tests
-echo "LARAVEL_LOGS_PATH=/path/to/your/laravel/storage/logs" > .env
-docker-compose up -d
-```
-
-| Service | URL | Credentials |
-|---------|-----|-------------|
-| Grafana | http://localhost:3000 | admin / admin |
-| Prometheus | http://localhost:9090 | - |
-| Loki | http://localhost:3100 | - |
-
-### Pre-built Dashboards
-
-Import dashboards from `dashboards/` directory:
+Import pre-built dashboards from the `dashboards/` directory:
 
 | Dashboard | Data Source | Description |
 |-----------|-------------|-------------|
@@ -319,6 +365,9 @@ Import dashboards from `dashboards/` directory:
 # External service calls
 {job="laravel-observatory"} | json | type="outbound" | service="stripe"
 
+# Scheduled tasks
+{job="laravel-observatory"} | json | message="SCHEDULED_TASK"
+
 # Exceptions
 {job="laravel-observatory"} | json | message="EXCEPTION"
 ```
@@ -326,6 +375,29 @@ Import dashboards from `dashboards/` directory:
 ## Kubernetes Deployment
 
 See [k8s/README.md](k8s/README.md) for Kubernetes deployment with Loki stack.
+
+## Upgrading from v1.x
+
+### Breaking Changes in v2.0
+
+1. **SidMonitor env vars renamed**: `OBSERVATORY_SIDMONITOR_*` is now `SIDMONITOR_*`
+2. **ExporterInterface**: New `recordScheduledTask()` method required for custom exporters
+
+Update your `.env` file if using SidMonitor:
+```env
+# Before (v1.x)
+OBSERVATORY_SIDMONITOR_ENDPOINT=...
+OBSERVATORY_SIDMONITOR_API_KEY=...
+
+# After (v2.0)
+SIDMONITOR_ENDPOINT=...
+SIDMONITOR_API_KEY=...
+```
+
+Re-publish config if upgrading:
+```bash
+php artisan vendor:publish --tag=observatory-config --force
+```
 
 ## Testing
 

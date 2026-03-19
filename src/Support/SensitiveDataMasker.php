@@ -26,9 +26,9 @@ class SensitiveDataMasker
     public static function fromConfig(): self
     {
         return new self(
-            config('observatory.inbound_logger.mask_fields', []),
-            config('observatory.inbound_logger.mask_replacement', '********'),
-            config('observatory.inbound_logger.exclude_headers', [])
+            config('observatory.inbound.mask_fields', []),
+            config('observatory.inbound.mask_replacement', '********'),
+            config('observatory.inbound.exclude_headers', [])
         );
     }
 
