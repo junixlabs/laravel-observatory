@@ -1,5 +1,10 @@
 <?php
 
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Auth\AuthenticationException;
+use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+
 return [
     /*
     |--------------------------------------------------------------------------
@@ -222,10 +227,10 @@ return [
 
         // Exceptions to ignore (by class)
         'ignore' => [
-            \Illuminate\Auth\AuthenticationException::class,
-            \Illuminate\Auth\Access\AuthorizationException::class,
-            \Symfony\Component\HttpKernel\Exception\NotFoundHttpException::class,
-            \Illuminate\Validation\ValidationException::class,
+            AuthenticationException::class,
+            AuthorizationException::class,
+            NotFoundHttpException::class,
+            ValidationException::class,
         ],
 
         // Exceptions to ignore (by class name pattern, supports wildcards)

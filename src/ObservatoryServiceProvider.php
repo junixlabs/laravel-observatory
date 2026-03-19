@@ -322,7 +322,8 @@ class ObservatoryServiceProvider extends ServiceProvider
 
         // Extend Laravel's exception handler to log exceptions
         $this->app->extend(ExceptionHandler::class, function ($handler) use ($logger, $exporter) {
-            return new class($handler, $logger, $exporter) implements ExceptionHandler {
+            return new class($handler, $logger, $exporter) implements ExceptionHandler
+            {
                 protected $handler;
 
                 protected $logger;
