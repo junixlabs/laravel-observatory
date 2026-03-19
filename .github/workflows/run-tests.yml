@@ -40,6 +40,7 @@ jobs:
 
       - name: Install dependencies
         run: |
+          composer config audit.block-insecure false
           composer require "laravel/framework:${{ matrix.laravel }}" --no-interaction --no-update
           composer update --prefer-dist --no-interaction --no-progress
 
