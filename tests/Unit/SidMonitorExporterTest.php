@@ -161,9 +161,18 @@ class SidMonitorExporterTest extends TestCase
 
     public function test_circuit_breaker_allows_retry_after_cooldown(): void
     {
-        Http::fake([
-            'api.sidmonitor.test/*' => Http::response(['error' => 'server error'], 500),
-        ]);
+        $callCount = 0;
+
+        Http::fake(function () use (&$callCount) {
+            $callCount++;
+
+            // First 3 calls fail (opening circuit), subsequent calls succeed
+            if ($callCount <= 3) {
+                return Http::response(['error' => 'server error'], 500);
+            }
+
+            return Http::response(['status' => 'ok'], 200);
+        });
 
         config([
             'observatory.sidmonitor.batch.size' => 1,
@@ -187,11 +196,6 @@ class SidMonitorExporterTest extends TestCase
 
         // Wait for cooldown to expire
         sleep(2);
-
-        // Now fake a successful response and flush again
-        Http::fake([
-            'api.sidmonitor.test/*' => Http::response(['status' => 'ok'], 200),
-        ]);
 
         $exporter->recordInbound([
             'method' => 'GET',

@@ -222,10 +222,10 @@ return [
 
         // Exceptions to ignore (by class)
         'ignore' => [
-            Illuminate\Auth\AuthenticationException::class,
-            Illuminate\Auth\Access\AuthorizationException::class,
-            Symfony\Component\HttpKernel\Exception\NotFoundHttpException::class,
-            Illuminate\Validation\ValidationException::class,
+            \Illuminate\Auth\AuthenticationException::class,
+            \Illuminate\Auth\Access\AuthorizationException::class,
+            \Symfony\Component\HttpKernel\Exception\NotFoundHttpException::class,
+            \Illuminate\Validation\ValidationException::class,
         ],
 
         // Exceptions to ignore (by class name pattern, supports wildcards)

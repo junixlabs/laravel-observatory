@@ -2,6 +2,7 @@
 
 namespace JunixLabs\Observatory\Tests;
 
+use JunixLabs\Observatory\Http\Controllers\MetricsController;
 use JunixLabs\Observatory\ObservatoryServiceProvider;
 use Orchestra\Testbench\TestCase as Orchestra;
 
@@ -29,7 +30,7 @@ class TestCase extends Orchestra
     protected function defineRoutes($router): void
     {
         // Register observatory routes for testing
-        $router->get('/metrics', [\JunixLabs\Observatory\Http\Controllers\MetricsController::class, 'index'])
+        $router->get('/metrics', [MetricsController::class, 'index'])
             ->name('observatory.metrics');
     }
 }

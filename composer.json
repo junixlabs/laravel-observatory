@@ -27,6 +27,7 @@
         "promphp/prometheus_client_php": "^2.6"
     },
     "require-dev": {
+        "guzzlehttp/guzzle": "^7.0",
         "laravel/pint": "^1.0",
         "orchestra/testbench": "^8.0|^9.0|^10.0",
         "phpstan/phpstan": "^1.10|^2.0",

@@ -2,7 +2,7 @@
 
 namespace JunixLabs\Observatory\Tests\Feature;
 
-use JunixLabs\Observatory\Middleware\RequestIdMiddleware;
+use Illuminate\Http\Request;
 use JunixLabs\Observatory\Tests\TestCase;
 
 class RequestIdMiddlewareTest extends TestCase
@@ -11,7 +11,7 @@ class RequestIdMiddlewareTest extends TestCase
     {
         parent::defineRoutes($router);
 
-        $router->middleware(RequestIdMiddleware::class)->get('/test-request-id', function (\Illuminate\Http\Request $request) {
+        $router->get('/test-request-id', function (Request $request) {
             return response()->json([
                 'request_id' => $request->attributes->get('request_id'),
             ]);

@@ -2,7 +2,9 @@
 
 namespace JunixLabs\Observatory\Loggers;
 
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 use JunixLabs\Observatory\Support\SensitiveDataMasker;
 
 class ExceptionLogger
@@ -334,8 +336,8 @@ class ExceptionLogger
         }
 
         $warningExceptions = $this->config['warning_exceptions'] ?? [
-            \Illuminate\Validation\ValidationException::class,
-            \Illuminate\Auth\AuthenticationException::class,
+            ValidationException::class,
+            AuthenticationException::class,
         ];
 
         foreach ($warningExceptions as $warningClass) {

@@ -61,7 +61,7 @@ class ScheduledTaskCollector
             'memory_usage_mb' => round(memory_get_usage(true) / 1048576, 2),
             'without_overlapping' => $event->withoutOverlapping ?? false,
             'mutex_name' => $event->mutexName() ?? null,
-            'metadata' => new \stdClass(),
+            'metadata' => new \stdClass,
         ];
 
         if ($exception !== null) {

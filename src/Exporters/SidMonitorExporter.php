@@ -139,7 +139,7 @@ class SidMonitorExporter implements ExporterInterface
             'max_attempts' => (int) ($data['max_attempts'] ?? 1),
             'user_id' => $data['user_id'] ?? $this->getAuthUserId(),
             'memory_usage_mb' => isset($data['memory']) ? round($data['memory'] / 1048576, 2) : null,
-            'metadata' => new \stdClass(),
+            'metadata' => new \stdClass,
         ];
 
         // Add payload if present
@@ -184,7 +184,7 @@ class SidMonitorExporter implements ExporterInterface
             'expected_run_time' => $data['scheduled_at'] ?? now()->toIso8601String(),
             'delay_ms' => $data['delay_ms'] ?? 0,
             'memory_usage_mb' => $data['memory_usage_mb'] ?? null,
-            'metadata' => $data['metadata'] ?? new \stdClass(),
+            'metadata' => $data['metadata'] ?? new \stdClass,
         ];
 
         $this->autoFlushIfNeeded();

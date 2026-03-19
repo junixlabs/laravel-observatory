@@ -2,8 +2,15 @@
 
 namespace JunixLabs\Observatory;
 
+use Illuminate\Console\Events\ScheduledTaskFailed;
+use Illuminate\Console\Events\ScheduledTaskFinished;
+use Illuminate\Console\Events\ScheduledTaskSkipped;
+use Illuminate\Console\Events\ScheduledTaskStarting;
 use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Contracts\Http\Kernel;
+use Illuminate\Http\Client\Events\ConnectionFailed;
+use Illuminate\Http\Client\Events\RequestSending;
+use Illuminate\Http\Client\Events\ResponseReceived;
 use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Queue\Events\JobProcessed;
 use Illuminate\Queue\Events\JobProcessing;
@@ -27,6 +34,7 @@ use JunixLabs\Observatory\Loggers\ScheduledTaskLogger;
 use JunixLabs\Observatory\Middleware\ObserveRequests;
 use JunixLabs\Observatory\Middleware\RequestIdMiddleware;
 use JunixLabs\Observatory\Support\SensitiveDataMasker;
+use Monolog\Formatter\JsonFormatter;
 
 class ObservatoryServiceProvider extends ServiceProvider
 {
@@ -184,8 +192,8 @@ class ObservatoryServiceProvider extends ServiceProvider
         // Track pending request start times keyed by object ID to avoid URL collisions
         $pendingTimings = [];
 
-        if (class_exists(\Illuminate\Http\Client\Events\RequestSending::class)) {
-            Event::listen(\Illuminate\Http\Client\Events\RequestSending::class, function ($event) use (&$pendingTimings) {
+        if (class_exists(RequestSending::class)) {
+            Event::listen(RequestSending::class, function ($event) use (&$pendingTimings) {
                 $key = spl_object_id($event->request);
                 $pendingTimings[$key] = microtime(true);
 
@@ -197,8 +205,8 @@ class ObservatoryServiceProvider extends ServiceProvider
             });
         }
 
-        if (class_exists(\Illuminate\Http\Client\Events\ResponseReceived::class)) {
-            Event::listen(\Illuminate\Http\Client\Events\ResponseReceived::class, function ($event) use ($collector, &$pendingTimings) {
+        if (class_exists(ResponseReceived::class)) {
+            Event::listen(ResponseReceived::class, function ($event) use ($collector, &$pendingTimings) {
                 $url = (string) $event->request->url();
                 $host = parse_url($url, PHP_URL_HOST) ?: '';
 
@@ -222,8 +230,8 @@ class ObservatoryServiceProvider extends ServiceProvider
             });
         }
 
-        if (class_exists(\Illuminate\Http\Client\Events\ConnectionFailed::class)) {
-            Event::listen(\Illuminate\Http\Client\Events\ConnectionFailed::class, function ($event) use ($collector, &$pendingTimings) {
+        if (class_exists(ConnectionFailed::class)) {
+            Event::listen(ConnectionFailed::class, function ($event) use ($collector, &$pendingTimings) {
                 $url = (string) $event->request->url();
                 $host = parse_url($url, PHP_URL_HOST) ?: '';
 
@@ -280,25 +288,25 @@ class ObservatoryServiceProvider extends ServiceProvider
 
         // Guard: ScheduledTaskStarting was added in Laravel 6.x, ScheduledTaskFailed in 7.x
         // Safe to use on Laravel 9+, class_exists guard kept for edge cases
-        if (! class_exists(\Illuminate\Console\Events\ScheduledTaskStarting::class)) {
+        if (! class_exists(ScheduledTaskStarting::class)) {
             return;
         }
 
         $collector = $this->app->make(ScheduledTaskCollector::class);
 
-        Event::listen(\Illuminate\Console\Events\ScheduledTaskStarting::class, function ($event) use ($collector) {
+        Event::listen(ScheduledTaskStarting::class, function ($event) use ($collector) {
             $collector->start($event->task);
         });
 
-        Event::listen(\Illuminate\Console\Events\ScheduledTaskFinished::class, function ($event) use ($collector) {
+        Event::listen(ScheduledTaskFinished::class, function ($event) use ($collector) {
             $collector->end($event->task, 'completed');
         });
 
-        Event::listen(\Illuminate\Console\Events\ScheduledTaskFailed::class, function ($event) use ($collector) {
+        Event::listen(ScheduledTaskFailed::class, function ($event) use ($collector) {
             $collector->end($event->task, 'failed', $event->exception);
         });
 
-        Event::listen(\Illuminate\Console\Events\ScheduledTaskSkipped::class, function ($event) use ($collector) {
+        Event::listen(ScheduledTaskSkipped::class, function ($event) use ($collector) {
             $collector->skip($event->task);
         });
     }
@@ -314,8 +322,7 @@ class ObservatoryServiceProvider extends ServiceProvider
 
         // Extend Laravel's exception handler to log exceptions
         $this->app->extend(ExceptionHandler::class, function ($handler) use ($logger, $exporter) {
-            return new class($handler, $logger, $exporter) implements ExceptionHandler
-            {
+            return new class($handler, $logger, $exporter) implements ExceptionHandler {
                 protected $handler;
 
                 protected $logger;
@@ -392,7 +399,7 @@ class ObservatoryServiceProvider extends ServiceProvider
                 'path' => storage_path('logs/observatory.log'),
                 'level' => $this->app['config']->get('logging.level', 'debug'),
                 'days' => 14,
-                'formatter' => \Monolog\Formatter\JsonFormatter::class,
+                'formatter' => JsonFormatter::class,
             ]);
         }
     }
