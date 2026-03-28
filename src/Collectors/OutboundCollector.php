@@ -28,6 +28,15 @@ class OutboundCollector
         $this->excludeHosts = config('observatory.outbound.exclude_hosts', []);
         $this->recordBody = config('observatory.outbound.record_body', false);
         $this->maxBodySize = config('observatory.outbound.max_body_size', 64000);
+
+        // Auto-exclude SidMonitor endpoint to prevent feedback loop
+        $endpoint = config('observatory.sidmonitor.endpoint', '');
+        if ($endpoint !== '') {
+            $host = parse_url($endpoint, PHP_URL_HOST);
+            if ($host && ! in_array($host, $this->excludeHosts, true)) {
+                $this->excludeHosts[] = $host;
+            }
+        }
     }
 
     /**
@@ -170,6 +179,10 @@ class OutboundCollector
     ): void {
         $parsed = parse_url($url);
         $host = $parsed['host'] ?? '';
+
+        if (! $this->shouldMonitor($host)) {
+            return;
+        }
         $path = $parsed['path'] ?? '/';
 
         $data = [
