@@ -64,6 +64,10 @@ class ScheduledTaskCollector
             'metadata' => new \stdClass,
         ];
 
+        if ($status === 'skipped') {
+            $data['skip_reason'] = $this->detectSkipReason($event);
+        }
+
         if ($exception !== null) {
             $data['error_message'] = $exception->getMessage();
             $data['error_trace'] = $exception->getFile() . ':' . $exception->getLine();
@@ -98,6 +102,15 @@ class ScheduledTaskCollector
     public function skip(ScheduledEvent $event): void
     {
         $this->end($event, 'skipped');
+    }
+
+    protected function detectSkipReason(ScheduledEvent $event): string
+    {
+        if (($event->withoutOverlapping ?? false) && $event->mutex && $event->mutex->exists($event)) {
+            return 'overlap';
+        }
+
+        return 'unknown';
     }
 
     public function shouldMonitor(ScheduledEvent $event): bool
