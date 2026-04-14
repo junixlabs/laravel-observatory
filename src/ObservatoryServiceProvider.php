@@ -22,6 +22,7 @@ use JunixLabs\Observatory\Collectors\InboundCollector;
 use JunixLabs\Observatory\Collectors\JobCollector;
 use JunixLabs\Observatory\Collectors\OutboundCollector;
 use JunixLabs\Observatory\Collectors\ScheduledTaskCollector;
+use JunixLabs\Observatory\Commands\CheckCommand;
 use JunixLabs\Observatory\Contracts\ExporterInterface;
 use JunixLabs\Observatory\Exporters\PrometheusExporter;
 use JunixLabs\Observatory\Exporters\SidMonitorExporter;
@@ -116,6 +117,12 @@ class ObservatoryServiceProvider extends ServiceProvider
         $this->publishes([
             __DIR__ . '/../config/observatory.php' => config_path('observatory.php'),
         ], 'observatory-config');
+
+        if ($this->app->runningInConsole()) {
+            $this->commands([
+                CheckCommand::class,
+            ]);
+        }
 
         $this->registerMiddleware();
         $this->registerRoutes();
