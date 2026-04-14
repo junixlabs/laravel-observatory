@@ -117,6 +117,12 @@ class ObservatoryServiceProvider extends ServiceProvider
             __DIR__ . '/../config/observatory.php' => config_path('observatory.php'),
         ], 'observatory-config');
 
+        if ($this->app->runningInConsole()) {
+            $this->commands([
+                \JunixLabs\Observatory\Commands\CheckCommand::class,
+            ]);
+        }
+
         $this->registerMiddleware();
         $this->registerRoutes();
         $this->registerHttpMacros();
