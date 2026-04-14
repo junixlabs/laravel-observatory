@@ -137,7 +137,8 @@ class InboundRequestLogger
             $data['query_params'] = $this->masker->maskArray($normalized);
         }
 
-        // Add environment label
+        // Add project and environment labels
+        $data['project'] = config('observatory.project', config('app.name'));
         $data['environment'] = config('observatory.labels.environment', config('app.env'));
 
         return $data;

@@ -85,7 +85,10 @@ class ScheduledTaskCollector
             }
         }
 
-        $data['labels'] = config('observatory.labels', []);
+        $data['labels'] = array_merge(
+            config('observatory.labels', []),
+            ['project' => config('observatory.project', config('app.name'))]
+        );
 
         $this->exporter->recordScheduledTask($data);
 
