@@ -75,7 +75,8 @@ class ScheduledTaskCollectorTest extends TestCase
                 && isset($data['scheduled_at'])
                 && isset($data['started_at'])
                 && isset($data['completed_at'])
-                && $data['labels'] === ['environment' => 'testing']
+                && $data['labels']['environment'] === 'testing'
+                && isset($data['labels']['project'])
                 && ! isset($data['error_message'])
                 && ! isset($data['error_trace']);
         });
