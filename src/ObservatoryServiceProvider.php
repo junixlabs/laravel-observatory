@@ -22,6 +22,7 @@ use JunixLabs\Observatory\Collectors\InboundCollector;
 use JunixLabs\Observatory\Collectors\JobCollector;
 use JunixLabs\Observatory\Collectors\OutboundCollector;
 use JunixLabs\Observatory\Collectors\ScheduledTaskCollector;
+use JunixLabs\Observatory\Commands\CheckCommand;
 use JunixLabs\Observatory\Contracts\ExporterInterface;
 use JunixLabs\Observatory\Exporters\PrometheusExporter;
 use JunixLabs\Observatory\Exporters\SidMonitorExporter;
@@ -119,7 +120,7 @@ class ObservatoryServiceProvider extends ServiceProvider
 
         if ($this->app->runningInConsole()) {
             $this->commands([
-                \JunixLabs\Observatory\Commands\CheckCommand::class,
+                CheckCommand::class,
             ]);
         }
 
