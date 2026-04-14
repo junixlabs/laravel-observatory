@@ -118,6 +118,10 @@ class ScheduledTaskLogger
             ];
         }
 
+        if ($status === 'skipped') {
+            $data['skip_reason'] = $this->detectSkipReason($event);
+        }
+
         if (property_exists($event, 'exitCode')) {
             $data['exit_code'] = $event->exitCode;
         }
@@ -125,6 +129,15 @@ class ScheduledTaskLogger
         $data['environment'] = config('observatory.labels.environment', config('app.env'));
 
         return $data;
+    }
+
+    protected function detectSkipReason(ScheduledEvent $event): string
+    {
+        if (($event->withoutOverlapping ?? false) && $event->mutex && $event->mutex->exists($event)) {
+            return 'overlap';
+        }
+
+        return 'unknown';
     }
 
     protected function getTaskKey(ScheduledEvent $event): string
