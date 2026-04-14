@@ -25,6 +25,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Project Identity
+    |--------------------------------------------------------------------------
+    |
+    | A unique slug identifying this project in centralized monitoring.
+    | Injected into all log payloads and metric labels so a central backend
+    | (SidMonitor) can distinguish events from different projects.
+    |
+    */
+    'project' => env('OBSERVATORY_PROJECT', env('APP_NAME', 'laravel')),
+
+    /*
+    |--------------------------------------------------------------------------
     | Metrics Exporter
     |--------------------------------------------------------------------------
     |

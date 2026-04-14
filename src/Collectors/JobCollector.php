@@ -64,8 +64,11 @@ class JobCollector
             ];
         }
 
-        // Add custom labels
-        $data['labels'] = config('observatory.labels', []);
+        // Add custom labels with project identity
+        $data['labels'] = array_merge(
+            config('observatory.labels', []),
+            ['project' => config('observatory.project', config('app.name'))]
+        );
 
         // Record metrics
         $this->exporter->recordJob($data);

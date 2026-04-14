@@ -98,6 +98,7 @@ class OutboundRequestLogger
             'path' => $uri->getPath(),
             'status_code' => $response ? $response->getStatusCode() : 0,
             'duration_ms' => round($durationMs, 2),
+            'project' => config('observatory.project', config('app.name')),
             'environment' => config('observatory.labels.environment', config('app.env')),
         ];
 
@@ -151,6 +152,7 @@ class OutboundRequestLogger
             'path' => $parsed['path'] ?? '/',
             'status_code' => $statusCode,
             'duration_ms' => round($durationMs, 2),
+            'project' => config('observatory.project', config('app.name')),
             'environment' => config('observatory.labels.environment', config('app.env')),
         ];
 
